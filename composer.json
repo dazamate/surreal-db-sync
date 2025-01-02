@@ -1,0 +1,14 @@
+{
+    "name": "dazamate/surreal-graph-sync",
+    "autoload": {
+        "psr-4": {
+            "Dazamate\\SurrealGraphSync\\": "includes/"
+        }
+    },
+    "classmap": [
+        "includes/Migration"
+    ],
+    "require": {
+        "surrealdb/surrealdb.php": "dev-main"
+    }
+}
