@@ -10,10 +10,11 @@
  */
 
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
-
+use Dazamate\SurrealGraphSync\Container;
 use Dazamate\SurrealGraphSync\Settings\AdminSettings;
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Migration\InitialMigration;
+use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
 
 add_action( 'plugins_loaded', function() {
     AdminSettings::load_hooks();
@@ -32,31 +33,6 @@ add_action('init', function() {
 add_action('admin_init', function () {
     SyncManager::load_hooks();    
     InitialMigration::load_hooks();
-
-    $settings = AdminSettings::get_settings();
-
-    $db = new \Surreal\Surreal();
-    
-    // try {
-    //     $db->connect($settings['db_address'] . ':' . $settings['db_port'], [
-    //         "namespace"     => $settings['db_namespace'],
-    //         "database"      => $settings['db_name']
-    //     ]);
-
-    //     $token = $db->signin([
-    //         "user" => $settings['db_username'],
-    //         "pass" => $settings['db_password']
-    //     ]);
-
-        
-    //     var_dump($token);
-    // } catch(\Throwable $e) {
-    //     var_dump($e->getMessage()); 
-    // //    exit;
-    // }    
-    
-    // We want to authenticate as a root user.
-    
-
-    //exit;
+    UserRelationsMigration::load_hooks();
+    Container::load_hooks();
 });

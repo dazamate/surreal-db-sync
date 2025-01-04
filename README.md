@@ -16,6 +16,7 @@ Migrations should have the following data structure
                 // down migrations array
             ],
             "datetime" => "2025-01-02" // used to order migrations
+            'name' => 'initial migration'
         ]
         // .. add more migrations to groups that created the table schemas that might need changing
     ],
@@ -28,7 +29,8 @@ Migrations should have the following data structure
             "down" => [
                 // down migrations array
             ],
-            "datetime" => "2025-01-03" // used to order migrations
+            "datetime" => "2025-01-03", // used to order migrations
+            'name' => 'plugin custom types migration'
         ],
         // .. add more migrations to groups that created the table schemas that might need changing
     ]

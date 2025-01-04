@@ -91,18 +91,18 @@ class InitialMigration {
     }
 
     protected static function create_person_fields_query(): string {   
-        $fields = [
-        ];
-        
+        $fields = [];
         return QueryBuilder::build_create_field_query_on_array(GraphTable::PERSON->to_string(), $fields);
     }
 
     protected static function create_migration_state_update_query(): string {
         return sprintf(
-            'UPDATE %s:state SET %s.last_migration_name = "%s"', 
+            'UPDATE %s:state SET %s.last_migration_name = "%s", %s.last_migration_time = <datetime>"%s";', 
             GraphTable::MIGRATION->to_string(),
             self::MIGRATION_GROUP,
-            self::MIGRATION_NAME
+            self::MIGRATION_NAME,
+            self::MIGRATION_GROUP,
+            self::MIGRATION_DATE
         );
     }
 }
