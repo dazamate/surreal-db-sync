@@ -17,11 +17,11 @@ class InitialMigration {
     }
 
     public static function build_migration_data(array $migrations): array {
-        $queries = [];
-        $queries['up'] = self::up();
-        $queries['down'] = self::down();
-        $queries['datetime'] = self::MIGRATION_DATE;
-        $queries['name'] = self::MIGRATION_NAME;
+        $queries                = [];
+        $queries['up']          = self::up();
+        $queries['down']        = self::down();
+        $queries['datetime']    = self::MIGRATION_DATE;
+        $queries['name']        = self::MIGRATION_NAME;
 
         $migrations[self::MIGRATION_GROUP][self::MIGRATION_NAME] = $queries;
         return $migrations;

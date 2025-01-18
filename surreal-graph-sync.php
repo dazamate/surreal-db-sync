@@ -15,15 +15,17 @@ use Dazamate\SurrealGraphSync\Settings\AdminSettings;
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Migration\InitialMigration;
 use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
+use Dazamate\SurrealGraphSync\Service\PostSyncService;
+use Dazamate\SurrealGraphSync\Mapper\ImageMapper;
 
 add_action( 'plugins_loaded', function() {
     AdminSettings::load_hooks();
+    PostSyncService::load_hooks();
 });
 
 add_action('init', function() {
     if (is_admin()) return;
     $post_id = 49;
-    //$payload = apply_filters('surreal_graph_map_recipe', $payload = [], $post_id);
     // echo '<pre>';
     // var_dump($payload); 
     // echo '</pre>';
@@ -35,4 +37,6 @@ add_action('admin_init', function () {
     InitialMigration::load_hooks();
     UserRelationsMigration::load_hooks();
     Container::load_hooks();
+
+    ImageMapper::register();
 });

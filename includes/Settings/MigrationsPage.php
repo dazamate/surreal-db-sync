@@ -228,7 +228,7 @@ class MigrationsPage {
             foreach($queries as $q): if (empty($q)) continue; ?>
                 <?php $result = $db->query($q); ?>
                 <pre style="white-space: pre-line;"><?php echo htmlentities($q); ?></pre>
-                <pre style="white-space: no-wrap; background-color:#d1d1d1; padding: 20px;"><?php htmlentities(var_dump($result) ?? ''); ?></pre>
+                <pre style="white-space: no-wrap; background-color: #393939; color:white; padding: 20px;"><?php htmlentities(var_dump($result) ?? ''); ?></pre>
             <?php endforeach;
         } catch (\Throwable $e) { ?>
             <pre style="white-space: pre-line;"><?php echo htmlentities($q); ?></pre>
