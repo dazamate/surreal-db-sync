@@ -52,20 +52,10 @@ class MigrationsPage {
 
         self::sort_migrations($migrations);
 
-        // echo '<pre>';
-        // var_dump($migrations); 
-        // echo '</pre>';
-        // exit;
-
         // Handle form submissions (Up/Down migrations)
         self::handle_migration_post();
 
         $prev_migrations = self::get_previous_migrations(array_keys($migrations));
-
-        // echo '<pre>';
-        // var_dump($prev_migrations); 
-        // echo '</pre>';
-        // exit;
 
         ?>
         <div class="wrap">

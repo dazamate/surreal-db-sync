@@ -28,15 +28,6 @@ add_action( 'plugins_loaded', function() {
     UserSyncService::load_hooks();
 });
 
-add_action('init', function() {
-    if (is_admin()) return;
-    $post_id = 49;
-    // echo '<pre>';
-    // var_dump($payload); 
-    // echo '</pre>';
-    // exit;
-});
-
 add_action('init', function () {
     SyncManager::load_hooks();    
     InitialMigration::load_hooks();

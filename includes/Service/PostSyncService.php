@@ -47,16 +47,9 @@ class PostSyncService {
 
         $mappings = apply_filters('surreal_sync_post_related_mapping', [], $post_id, $post_type);
 
-        //var_dump($mappings); exit;
-
         foreach($mappings as $mapping) {
             self::map_relation($mapping, $db);
         }
-
-        exit;
-        
-        // header("Content-Type: text/plain");
-        // var_dump($q); exit;
     }
 
     private static function try_get_record_id_from_response(array $res): ?string {
@@ -169,13 +162,5 @@ class PostSyncService {
         );
 
         $res = $db->query($q);
-
-        header('Content-Type: text/plain');
-        echo '<pre>';
-        var_dump($q);
-        var_dump($db->query($q));
-        echo '</pre>';
-        // exit;
-
     }
 }
