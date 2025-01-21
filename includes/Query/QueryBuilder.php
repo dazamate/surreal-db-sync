@@ -72,52 +72,52 @@ class QueryBuilder {
         return get_post_meta($post_id, 'surreal_id', true) ?: null;
     }
 
-    private static function get_field_value(array $field_data): mixed {
+    private static function get_field_value(array $data): mixed {
         // If there's no 'value' key, return NULL
-        if (!array_key_exists('value', $field_data)) return null;
+        if (!array_key_exists('value', $data)) return null;
 
         // If this is a number field, handle 0 correctly
-        if ($field_data['type'] === 'number') {
-            if ($field_data['value'] === '0' || $field_data['value'] === 0) {
+        if ($data['type'] === 'number') {
+            if ($data['value'] === '0' || $data['value'] === 0) {
                 return 0;
             } else {
-                return $field_data['value'];
+                return $data['value'];
             }
         }
 
         // For all other cases, just return the raw value
-        return empty($field_data['value']) ? null : $field_data['value'];
+        return empty($data['value']) ? null : $data['value'];
     }
 
     public static function build_set_clause(array $mapped_data): string {
         $set_clauses = [];
 
-        foreach($mapped_data as $field_key => $field_data) {
-            if (!isset($field_data['type'])) continue;
+        foreach($mapped_data as $key => $data) {
+            if (!isset($data['type'])) continue;
             
-            if (self::get_field_value($field_data) === null) {
-                $fields[] = sprintf('%s = NULL', $field_key);
+            if (self::get_field_value($data) === null) {
+                $fields[] = sprintf('%s = NULL', $key);
                 continue;
             }
        
-            switch (self::get_primative_type($field_data['type'])) {
+            switch (self::get_primative_type($data['type'])) {
                 case 'string':
-                    $set_clauses[] = sprintf("%s = <string>'%s'", $field_key, $field_data['value']);
+                    $set_clauses[] = sprintf("%s = <string>'%s'", $key, $data['value']);
                     break;
 
                 case 'number':                    
-                    $set_clauses[] = sprintf("%s = <number>%d", $field_key, $field_data['value']);
+                    $set_clauses[] = sprintf("%s = <number>%d", $key, $data['value']);
                     break;
 
                 case 'record': {
-                    $record_id = self::get_record_id_from_post((int) $field_data['value']);
+                    $record_id = self::get_record_id_from_post((int) $data['value']);
 
                     if ($record_id === null) {
-                        $fields[] = sprintf('%s = NULL', $field_key);
+                        $fields[] = sprintf('%s = NULL', $key);
                     } else {
                         $set_clauses[] = sprintf("%s = <%s>%s", 
-                            $field_key, 
-                            $field_data['type'],
+                            $key, 
+                            $data['type'],
                             $record_id
                         );
                     }
@@ -126,32 +126,32 @@ class QueryBuilder {
                 }
 
                 case 'array':
-                    $array_type = ($field_data['type'] === 'array') ? 'array' : $field_data['type'];
+                    $array_type = ($data['type'] === 'array') ? 'array' : $data['type'];
       
                     $set_clauses[] = sprintf("%s = <%s>%s",
-                        $field_key,
+                        $key,
                         $array_type,
-                        self::build_array_str($field_data['value'])
+                        self::build_array_str($data['value'])
                     );
 
                     break;
 
                 case 'object':
                     $set_clauses[] = sprintf("%s = <object>%s",
-                        $field_key,
-                        self::build_object_str($field_data['value'])
+                        $key,
+                        self::build_object_str($data['value'])
                     );
                     break;
 
                 default:
-                    $set_clauses[] = sprintf("%s = %s%s", $field_key, $field_data['type'], $field_data['value']);
+                    $set_clauses[] = sprintf("%s = %s%s", $key, $data['type'], $data['value']);
             }
         }
 
         return implode(', ', $set_clauses);
     }
 
-    private static function build_array_str(array $array_data): string {
+    public static function build_array_str(array $array_data): string {
         if (empty($array_data)) return '[]';
 
         $fields = [];
@@ -209,42 +209,42 @@ class QueryBuilder {
         return sprintf("[%s]", implode(', ', $fields));
     }
 
-    private static function build_object_str(array $object_data): string {
+    public static function build_object_str(array $object_data): string {
         $fields = [];
 
-        foreach($object_data as $object_key => $object_field_data) {
-            if (self::get_field_value($object_field_data) === null) {
-                $fields[] = sprintf('%s: NULL', $object_key );                
+        foreach($object_data as $key => $data) {
+            if (self::get_field_value($data) === null) {
+                $fields[] = sprintf('%s: NULL', $key );                
                 continue;
             }
 
-            switch(self::get_primative_type($object_field_data['type'])) {
+            switch(self::get_primative_type($data['type'])) {
                 case 'array':
-                    $array_type = ($object_field_data['type'] === 'array') ? '<array>' : $field_data['type'];
+                    $array_type = ($data['type'] === 'array') ? '<array>' : $data['type'];
 
                     $fields[] = sprintf('%s: %s%s',
-                        $object_key,
+                        $key,
                         $array_type,
-                        self::build_array_str($object_field_data['value'])
+                        self::build_array_str($data['value'])
                     );
                     break;
 
                 case 'object':
                     $fields[] = sprintf('%s: <object>%s',
-                        $object_key,
-                        self::build_object_str($object_field_data['value'])
+                        $key,
+                        self::build_object_str($data['value'])
                     );
                     break;
 
                 case 'record': {
-                    $record_id = self::get_record_id_from_post((int) $object_field_data['value']);
+                    $record_id = self::get_record_id_from_post((int) $data['value']);
 
                     if ($record_id === null) {
-                        $fields[] = sprintf('%s: NULL', $object_key);
+                        $fields[] = sprintf('%s: NULL', $key);
                     } else {
                         $fields[] = sprintf("%s: <%s>%s",
-                            $object_key, 
-                            $object_field_data['type'],
+                            $key, 
+                            $data['type'],
                             $record_id
                         );
                     }
@@ -254,27 +254,90 @@ class QueryBuilder {
                 
                 case 'string':
                     $fields[] = sprintf("%s: <string>'%s'",
-                        $object_key,
-                        $object_field_data['value']
+                        $key,
+                        $data['value']
                     );
                     break;
 
                 case 'number':
                     $fields[] = sprintf("%s: <number>%d",
-                        $object_key,
-                        $object_field_data['value']
+                        $key,
+                        $data['value']
                     );
-                    break;    
+                    break;
 
                 default:
                     $fields[] = sprintf('%s: <%s>%s',
-                        $object_key,
-                        $object_field_data['type'],
-                        $object_field_data['value']
-                    );                    
+                        $key,
+                        $data['type'],
+                        $data['value']
+                    );
             }
         }
 
         return sprintf("{%s}", implode(', ', $fields));
+    }
+
+    static public function build_relate_query(
+        string $from_record_id,
+        string $to_record_id,
+        string $relation_table_name,
+        array $data,
+        bool $unique = true // only one link allowed
+    ) {
+        /** 
+         * Generates a relation query like this:
+         * 
+         * LET $rel_id = (SELECT id FROM created_by where in = ($person.id) and out = ($recipe.id)).id[0];
+         * 
+         * IF $rel_id is NONE THEN {
+         *   LET $new_rel_id = (RELATE ($person.id)->created_by->($recipe.id));
+         *   UPDATE $new_rel_id CONTENT { units: 'created' };
+         * } else {
+         *    UPDATE $rel_id CONTENT { units: 'updated' };
+         * } END;
+         */
+        $data_obj_str = self::build_object_str($data);
+    
+        if (!$unique) {
+            return sprintf(
+                'RELATE (%s)->%s->(%s) CONTENT %s RETURN id;',
+                $from_record_id,
+                $relation_table_name,
+                $to_record_id,
+                $data_obj_str
+            );
+        }
+    
+        $q = sprintf(
+            'LET $rel_id = (SELECT id FROM %s where in = %s and out = %s).id[0];',
+            $relation_table_name,
+            $from_record_id,
+            $to_record_id
+        );
+    
+        $q .= 'IF $rel_id is NONE THEN {';
+        $q .= sprintf(
+            '$rel_id = (RELATE (%s)->%s->(%s));',
+            $from_record_id,
+            $relation_table_name,
+            $to_record_id
+        );
+    
+        $q .= sprintf(
+            'UPDATE $rel_id CONTENT %s;',
+            $data_obj_str
+        );
+    
+        $q .= '} else {';
+    
+        $q .= sprintf(
+            'UPDATE $rel_id CONTENT %s;',
+            $data_obj_str
+        );
+    
+        $q .= '} END;';
+
+        return $q;
     }
 }

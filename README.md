@@ -3,12 +3,12 @@
 To map a post type to a surreal node, hook into this filter
 
 ```php
-    add_filter('surreal_graph_map_' . ProductPostType::POST_TYPE, [__CLASS__, 'map'], 10, 2);
+    apply_filters('surreal_graph_map_{post_type}', array $mapped_data, int $post_id);
 ```
 When a product is created/updated/ this will be called for the post type to get a mapping of surreal types.
 
 ```php
-    public static function map(array $mapped_data, int $post_id): array {
+    add_filter('surreal_graph_map_service', $mapped_data, $post_id): array {
         $post = get_post($post_id);
 
         $mapped_data['title'] = [
@@ -58,6 +58,47 @@ When a product is created/updated/ this will be called for the post type to get 
 
 ```
 
+##Createing Relations##
+
+To add graph relations, tap into the following filter which will be called during post save
+
+```php
+    apply_filters('surreal_sync_post_related_mapping', array $mappings, int $post_id, string $post_type);
+```
+
+Append arrays of data to the mappings array to add relations
+
+```php 
+    add_filter('surreal_sync_post_related_mapping', $mappings, $post_id, $post_type): array {
+        if ($post_type !== 'order') return $mappings;
+
+        $products = get_relevent_products();
+        $user_record_id = 'customer:978fd9sdf987df';
+
+        foreach($products as $product) {
+            $mappings[] = [
+                (required) 'from_record'   => $user_record_id,
+                (required) 'to_record'     => get_post_meta($product->ID, 'surreal_id', true),
+                (required) 'relation_name' => 'ordered',
+                'unique'        => false,
+                'data'          => [
+                    'discounts' => [
+                        'type' => 'number',
+                        'value' => 0.2
+                    ],
+                    'coupons' => [
+                        'type' => 'array',
+                        'value' => [
+                            ...
+                        ]
+                    ]
+                ]
+            ];
+        }
+
+        return $mappings;
+    }
+```
 
 ##Migrations (Sidelined at the moment)##
 

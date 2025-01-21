@@ -58,14 +58,15 @@ class SyncManager {
         }
 
         $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, [], $post_id);
+        $relate_data = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
+
         // header('Content-Type: text/plain');
         // echo '<pre>';
         // echo '-- MAPPED DATA --';
         // print_r($mapped_data);
         // echo '</pre>';
 
-        do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data);
-
+        do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data, $relate_data);
     }
 
     public static function on_post_delete(int $post_id) {
