@@ -10,6 +10,7 @@
  */
 
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
+
 use Dazamate\SurrealGraphSync\Container;
 use Dazamate\SurrealGraphSync\Settings\AdminSettings;
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
@@ -29,7 +30,7 @@ add_action( 'plugins_loaded', function() {
 });
 
 add_action('init', function () {
-    SyncManager::load_hooks();    
+    SyncManager::load_hooks();
     InitialMigration::load_hooks();
     UserRelationsMigration::load_hooks();
     Container::load_hooks();

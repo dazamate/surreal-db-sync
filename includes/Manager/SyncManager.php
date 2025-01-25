@@ -2,6 +2,8 @@
 
 namespace Dazamate\SurrealGraphSync\Manager;
 
+use Dazamate\SurrealGraphSync\Mapper\PostMapper;
+
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class SyncManager {
@@ -57,7 +59,10 @@ class SyncManager {
             return;
         }
 
-        $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, [], $post_id);
+        // Allways map the generic post data, downstream filters can add/remove generic data
+        $mapped_data = PostMapper::map([], $post_id);
+
+        $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_data, $post_id);
         $relate_data = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
 
         do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data, $relate_data);

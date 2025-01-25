@@ -6,9 +6,23 @@ use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
 
 class PostSyncService {
+    const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
+
     public static function load_hooks() {
         add_action('surreal_sync_post', [__CLASS__, 'sync_post'], 10, 3);
         add_action('surreal_delete_post', [__CLASS__, 'delete_post'], 10, 1);
+        add_action('admin_notices', [__CLASS__ , 'display_errors']);
+    }
+
+    public static function display_errors() { 
+        global $post;
+        $error = get_post_meta($post->ID, self::SURREAL_SYNC_ERROR_META_KEY, true);
+
+    if (!empty($error)): ?>
+            <div class="notice notice-error is-dismissible">
+                <p><?php echo $error; ?></p>
+            </div>
+        <?php endif;
     }
 
     public static function sync_post(int $post_id, string $post_type, array $mapped_data) {
@@ -29,21 +43,27 @@ class PostSyncService {
         $db = apply_filters('get_surreal_db_conn', null);
 
         if ( ! ( $db instanceof \Surreal\Surreal ) ) {
-            add_action('admin_notices', [__CLASS__, 'render_surreal_db_conn_error_notice']);
+            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, 'Surreal sync error: Unable to establish database connection');
             error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
             return;
         }
 
-        $res = $db->query($q);
+        try {
+            $res = $db->query($q);
+        } catch (\Exception $e) {
+            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, sprintf("Surreal query error: %s", $e->getMessage()));
+            return;
+        }
 
         $surreal_id = self::try_get_record_id_from_response($res);
 
         if (empty($surreal_id)) {
-            add_action('admin_notices', [__CLASS__, 'render_surreal_id_error_notice']);
+            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, 'Surreal sync error: Did not get a record ID from surreal');
             return;
         }
         
         update_post_meta($post_id, 'surreal_id', $surreal_id);
+        delete_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY);
 
         $mappings = apply_filters('surreal_sync_post_related_mapping', [], $post_id, $post_type);
 
@@ -59,20 +79,6 @@ class PostSyncService {
 
         return $res[0][0]['id'] ?? null;
     }
-
-    private static function render_surreal_id_error_notice() { ?>
-        <div class="notice notice-error is-dismissible">
-            <p>Did not get an ID back from surreal</p>
-        </div>
-    <?php
-    }
-
-    private static function render_surreal_db_conn_error_notice() { ?>
-        <div class="notice notice-error is-dismissible">
-            <p>Unable to establish connection database to Surreal DB</p>
-        </div>
-    <?php
-    }    
 
     public static function delete_post(\WP_Post $post): void {
         $surreal_record_id = get_post_meta($post->ID, SyncManager::SURREAL_DB_ID_META_KEY, true);

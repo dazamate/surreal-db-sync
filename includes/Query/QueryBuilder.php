@@ -104,7 +104,11 @@ class QueryBuilder {
                 case 'string':
                     $set_clauses[] = sprintf("%s = <string>'%s'", $key, $data['value']);
                     break;
-
+                
+                case 'datetime':
+                    $set_clauses[] = sprintf("%s = <datetime>'%s'", $key, $data['value']);
+                    break;
+                    
                 case 'number':                    
                     $set_clauses[] = sprintf("%s = <number>%d", $key, $data['value']);
                     break;
@@ -182,6 +186,10 @@ class QueryBuilder {
                         $fields[] = sprintf("'%s'", $item['value']);
                         break;
 
+                    case 'datetime':
+                        $fields[] = sprintf("<datetime>'%s'", $item['value']);
+                        break;
+
                     case 'number':
                         $fields[] = $item['value'];
                         break;
@@ -254,6 +262,13 @@ class QueryBuilder {
                 
                 case 'string':
                     $fields[] = sprintf("%s: <string>'%s'",
+                        $key,
+                        $data['value']
+                    );
+                    break;
+
+                case 'datetime':
+                    $fields[] = sprintf("%s: <datetime>'%s'",
                         $key,
                         $data['value']
                     );
