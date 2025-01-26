@@ -4,6 +4,7 @@ namespace Dazamate\SurrealGraphSync\Service;
 
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
+use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 
 class PostSyncService {
     const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
@@ -11,18 +12,6 @@ class PostSyncService {
     public static function load_hooks() {
         add_action('surreal_sync_post', [__CLASS__, 'sync_post'], 10, 3);
         add_action('surreal_delete_post', [__CLASS__, 'delete_post'], 10, 1);
-        add_action('admin_notices', [__CLASS__ , 'display_errors']);
-    }
-
-    public static function display_errors() { 
-        global $post;
-        $error = get_post_meta($post->ID, self::SURREAL_SYNC_ERROR_META_KEY, true);
-
-    if (!empty($error)): ?>
-            <div class="notice notice-error is-dismissible">
-                <p><?php echo $error; ?></p>
-            </div>
-        <?php endif;
     }
 
     public static function sync_post(int $post_id, string $post_type, array $mapped_data) {
@@ -30,7 +19,8 @@ class PostSyncService {
 
         // It's not a post type this plugin handles
         if (empty($node_type)) {
-            throw new \Exception('Unable to map the post type to surreal node type. Please register in filter surreal_graph_node_name');
+            ErrorManager::add($post_id, ['Unable to map the post type to surreal node type. Please register in filter surreal_graph_node_name']);
+            return;
         }
 
         // Build the entire CONTENT clause to set/update all the fields
@@ -43,7 +33,7 @@ class PostSyncService {
         $db = apply_filters('get_surreal_db_conn', null);
 
         if ( ! ( $db instanceof \Surreal\Surreal ) ) {
-            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, 'Surreal sync error: Unable to establish database connection');
+            ErrorManager::add($post_id, ['Surreal sync error: Unable to establish database connection']);
             error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
             return;
         }
@@ -51,14 +41,14 @@ class PostSyncService {
         try {
             $res = $db->query($q);
         } catch (\Exception $e) {
-            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, sprintf("Surreal query error: %s", $e->getMessage()));
+            ErrorManager::add($post_id, [sprintf("Surreal query error: %s", $e->getMessage())]);
             return;
         }
 
         $surreal_id = self::try_get_record_id_from_response($res);
 
         if (empty($surreal_id)) {
-            update_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY, 'Surreal sync error: Did not get a record ID from surreal');
+            ErrorManager::add($post_id, ['Surreal sync error: Did not get a record ID from surreal']);
             return;
         }
         
@@ -89,40 +79,21 @@ class PostSyncService {
             strlen($surreal_record_id) < 1 ||               // Make sure string is more than 1 char
             strpos($surreal_record_id, ':') === false       // Make sure it has the record delimiter
         ) return;
-
+        
         $q = "DELETE $surreal_record_id";
 
         $db = apply_filters('get_surreal_db_conn', null);
 
         if ( ! ( $db instanceof \Surreal\Surreal ) ) {
+            ErrorManager::add($post->ID, ['Unable to get Surreal DB connection']);
             error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
+            return;
         }
 
         $res = $db->query($q);
     }
 
-    private static function validate_sync_data(array $relation_data): bool {
-        $required_keys = [
-            'from_record',
-            'to_record',
-            'relation_name'
-        ];
-        
-        $diff = array_diff_key(array_flip($relation_data), array_keys($relation_data));
-
-        if (count($diff) > 0) {
-            add_action('admin_notices', function() use ($diff) { ?>
-                <div class="notice notice-error is-dismissible">
-                    <p>Surreal mapping Error - Couldn't sync data. Missing keys: <?php echo implode(', ', $diff); ?></p>
-                </div>
-            <?php });
-
-            return false;
-        }
-
-        return true;
-    }
-
+    // TODO - move to different validate class
     private static function validate_relation_data(array $relation_data): bool {
         $required_keys = [
             'from_record',
@@ -133,12 +104,7 @@ class PostSyncService {
         $diff = array_diff_key(array_flip($required_keys), $relation_data);
         
         if (count($diff) > 0) {
-            add_action('admin_notices', function() use ($diff) { ?>
-                <div class="notice notice-error is-dismissible">
-                    <p>Surreal mapping Error - Couldn't map relationship data. Missing keys: <?php echo implode(', ', $diff); ?></p>
-                </div>
-            <?php });
-
+            ErrorManager::add(get_the_id(), [sprintf("Surreal mapping Error - Couldn't sync data. Missing keys: %s", implode(', ', $diff))]);
             return false;
         }
 

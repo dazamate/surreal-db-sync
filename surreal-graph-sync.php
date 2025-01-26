@@ -18,6 +18,7 @@ use Dazamate\SurrealGraphSync\Migration\InitialMigration;
 use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
 use Dazamate\SurrealGraphSync\Service\PostSyncService;
 use Dazamate\SurrealGraphSync\Service\UserSyncService;
+use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 
 use Dazamate\SurrealGraphSync\Mapper\ImageMapper;
 use Dazamate\SurrealGraphSync\Mapper\PostMapper;
@@ -34,6 +35,7 @@ add_action('init', function () {
     InitialMigration::load_hooks();
     UserRelationsMigration::load_hooks();
     Container::load_hooks();
+    ErrorManager::load_hooks();
 
     ImageMapper::register();
     PostMapper::register();

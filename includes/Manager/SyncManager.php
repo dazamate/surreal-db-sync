@@ -3,6 +3,8 @@
 namespace Dazamate\SurrealGraphSync\Manager;
 
 use Dazamate\SurrealGraphSync\Mapper\PostMapper;
+use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
+use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -31,7 +33,7 @@ class SyncManager {
 
     public static function render_surreal_id_info_in_image_ui($content, $post_id) {
         $surreal_id = get_post_meta($post_id, self::SURREAL_DB_ID_META_KEY, true);
-    
+
         $html = '<div class="surreal-image-info" style="margin-top: 10px;">';
         $html .= 'Surreal ID: <strong>' . esc_html($surreal_id) . '</strong>';
         $html .= '</div>';
@@ -59,11 +61,23 @@ class SyncManager {
             return;
         }
 
+        ErrorManager::clear($post_id);
+
         // Allways map the generic post data, downstream filters can add/remove generic data
         $mapped_data = PostMapper::map([], $post_id);
 
         $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_data, $post_id);
+
+        // validate the mapped data
+        $errors = [];
+        
+        if (!MappingDataValidator::validate($mapped_data, $errors)) {
+            ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB mapping error: %s", $e), $errors));
+            return;
+        }
+
         $relate_data = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
+
 
         do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data, $relate_data);
     }

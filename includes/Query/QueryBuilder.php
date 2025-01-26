@@ -49,7 +49,7 @@ class QueryBuilder {
         return implode(' ', $output);
     }
 
-    private static function get_primative_type(string $type): string {
+    public static function get_primitive_type(string $type): string {
         if (strpos($type, 'array') === 0 || strpos($type, '<array') === 0) {
             return 'array';
         }
@@ -100,7 +100,7 @@ class QueryBuilder {
                 continue;
             }
        
-            switch (self::get_primative_type($data['type'])) {
+            switch (self::get_primitive_type($data['type'])) {
                 case 'string':
                     $set_clauses[] = sprintf("%s = <string>'%s'", $key, $data['value']);
                     break;
@@ -163,7 +163,7 @@ class QueryBuilder {
         foreach ($array_data as $item) {
             // If $item is an array that has ['type'] and ['value'], handle it:
             if (is_array($item) && isset($item['type'], $item['value'])) {
-                switch (self::get_primative_type($item['type'])) {
+                switch (self::get_primitive_type($item['type'])) {
                     case 'array':
                         $fields[] = self::build_array_str($item['value']);
                         break;
@@ -226,7 +226,7 @@ class QueryBuilder {
                 continue;
             }
 
-            switch(self::get_primative_type($data['type'])) {
+            switch(self::get_primitive_type($data['type'])) {
                 case 'array':
                     $array_type = ($data['type'] === 'array') ? 'array' : $data['type'];
 
