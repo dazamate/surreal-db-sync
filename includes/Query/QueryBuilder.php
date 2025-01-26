@@ -228,9 +228,9 @@ class QueryBuilder {
 
             switch(self::get_primative_type($data['type'])) {
                 case 'array':
-                    $array_type = ($data['type'] === 'array') ? '<array>' : $data['type'];
+                    $array_type = ($data['type'] === 'array') ? 'array' : $data['type'];
 
-                    $fields[] = sprintf('%s: %s%s',
+                    $fields[] = sprintf('%s: <%s>%s',
                         $key,
                         $array_type,
                         self::build_array_str($data['value'])
