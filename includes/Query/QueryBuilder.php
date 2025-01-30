@@ -2,6 +2,9 @@
 
 namespace Dazamate\SurrealGraphSync\Query;
 
+use Dazamate\SurrealGraphSync\Validate\InputValidator;
+use Dazamate\SurrealGraphSync\Utils\Inputs;
+
 class QueryBuilder {
     static public function build_create_field_query(string $table, string $key, array $rules): string {
         $q = sprintf('DEFINE FIELD %s ON TABLE %s TYPE %s', 
@@ -68,10 +71,6 @@ class QueryBuilder {
         return null;
     }
 
-    private static function get_record_id_from_post(int $post_id): ?string {
-        return get_post_meta($post_id, 'surreal_id', true) ?: null;
-    }
-
     private static function get_field_value(array $data): mixed {
         // If there's no 'value' key, return NULL
         if (!array_key_exists('value', $data)) return null;
@@ -106,7 +105,12 @@ class QueryBuilder {
                     break;
                 
                 case 'datetime':
-                    $set_clauses[] = sprintf("%s = <datetime>'%s'", $key, $data['value']);
+                    $set_clauses[] = sprintf(
+                        "%s = <datetime>'%s'",
+                        $key,
+                        (ctype_digit((string)$data['value']) ? date('c', $data['value']) : $data['value']) // Convert time stamp to date string if needed
+                    );
+                    
                     break;
                     
                 case 'number':                    
@@ -114,8 +118,8 @@ class QueryBuilder {
                     break;
 
                 case 'record': {
-                    $record_id = self::get_record_id_from_post((int) $data['value']);
-
+                    $record_id = Inputs::parse_record_id($data['value']);
+                    
                     if ($record_id === null) {
                         $fields[] = sprintf('%s = NULL', $key);
                     } else {
@@ -173,7 +177,7 @@ class QueryBuilder {
                         break;
 
                     case 'record': {
-                        $record_id = self::get_record_id_from_post((int) $item['value']);
+                        $record_id = Inputs::parse_record_id($item['value']);
     
                         if ($record_id !== null) {
                             $fields[] = $record_id;
@@ -187,7 +191,10 @@ class QueryBuilder {
                         break;
 
                     case 'datetime':
-                        $fields[] = sprintf("<datetime>'%s'", $item['value']);
+                        $fields[] = sprintf(
+                            "<datetime>'%s'",
+                            (ctype_digit((string)$item['value']) ? date('c', $item['value']) : $item['value'])
+                        );
                         break;
 
                     case 'number':
@@ -245,8 +252,8 @@ class QueryBuilder {
                     break;
 
                 case 'record': {
-                    $record_id = self::get_record_id_from_post((int) $data['value']);
-
+                    $record_id = Inputs::parse_record_id($data['value']);
+                    
                     if ($record_id === null) {
                         $fields[] = sprintf('%s: NULL', $key);
                     } else {
@@ -270,7 +277,7 @@ class QueryBuilder {
                 case 'datetime':
                     $fields[] = sprintf("%s: <datetime>'%s'",
                         $key,
-                        $data['value']
+                        (ctype_digit((string)$data['value']) ? date('c', $data['value']) : $data['value'])
                     );
                     break;
 

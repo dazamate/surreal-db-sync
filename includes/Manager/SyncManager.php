@@ -4,7 +4,9 @@ namespace Dazamate\SurrealGraphSync\Manager;
 
 use Dazamate\SurrealGraphSync\Mapper\PostMapper;
 use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
+use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
+use Dazamate\SurrealGraphSync\Utils\Inputs;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -65,7 +67,6 @@ class SyncManager {
 
         // Allways map the generic post data, downstream filters can add/remove generic data
         $mapped_data = PostMapper::map([], $post_id);
-
         $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_data, $post_id);
 
         // validate the mapped data
@@ -76,8 +77,20 @@ class SyncManager {
             return;
         }
 
-        $relate_data = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
+        $related_data_mappings = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
+        
+        foreach ($related_data_mappings as $related_data) {
+            if (!RelatedMappingDataValidator::validate($relate_data, $errors)) {
+                ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB related data mapping error: %s", $e), $errors));
+            }
+        }
 
+        if (!empty($errors)) return;
+
+        foreach ($related_data_mappings as &$related_data) {
+            $relate_data['from_record'] = Inputs::parse_record_id($relate_data['from_record']);
+            $relate_data['to_record'] = Inputs::parse_record_id($relate_data['to_record']);
+        }
 
         do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data, $relate_data);
     }

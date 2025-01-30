@@ -3,6 +3,7 @@
 namespace Dazamate\SurrealGraphSync\Validate;
 
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
+use Dazamate\SurrealGraphSync\Validate\InputValidator;
 
 class MappingDataValidator {
     /**
@@ -74,17 +75,25 @@ class MappingDataValidator {
                 return true;
 
             case 'datetime':
+                // it's a timestamp
+                if (ctype_digit((string)$value)) return true;
+
                 // Now we check strictly for ISO8601 (like date('c')).
-                if (!self::is_ISO8601($value)) {
-                    $errors[] = "[$path]: 'value' must be a valid ISO8601 datetime string (e.g. 2025-01-26T18:29:00+00:00).";
+                if (!InputValidator::is_ISO8601($value)) {
+                    $errors[] = "[$path]: 'value' must be a timestamp or a valid ISO8601 datetime string (e.g. 2025-01-26T18:29:00+00:00).";
                     return false;
                 }
                 return true;
 
             case 'record':
+                // Check if valid surreal record ID
+                if (InputValidator::is_surreal_db_record($value)) {
+                    return true;
+                }
+
                 // Check it's integer-ish (the post ID).
                 if (!ctype_digit((string)$value) && !empty($value)) {
-                    $errors[] = "[$path]: 'value' must be a numeric post ID for type=record.";
+                    $errors[] = "[$path]: 'value' must be a surreal record id or a post ID for type=record.";
                     return false;
                 }
                 return true;
@@ -132,29 +141,7 @@ class MappingDataValidator {
         }
     }
 
-    private static function get_primitive_type(string $type_name): string
-    {
+    private static function get_primitive_type(string $type_name): string {
         return QueryBuilder::get_primitive_type($type_name);
-    }
-
-    /**
-     * Check if $value is a valid ISO8601 datetime string.
-     * 
-     * Example: 2025-01-26T18:29:00+00:00
-     */
-    private static function is_ISO8601(mixed $value): bool
-    {
-        if (!is_string($value)) {
-            return false;
-        }
-
-        // Try creating a DateTime object from the string:
-        // \DateTime::ATOM is basically "Y-m-d\TH:i:sP"
-        $dt = \DateTime::createFromFormat(\DateTime::ATOM, $value);
-        if (!$dt) {
-            return false;
-        }
-
-        return ($dt->format(\DateTime::ATOM) === $value);
     }
 }

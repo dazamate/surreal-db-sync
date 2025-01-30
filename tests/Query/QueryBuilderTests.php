@@ -76,12 +76,56 @@ class QueryBuilderTests extends TestCase
         $this->assertSame($expected, QueryBuilder::build_object_str($data));
     }
 
+
+    public function testShouldBuildObjectWithDatetimeStr()
+    {
+        $data = [
+            'created_at' => [
+                'type'  => 'datetime',
+                'value' => '476244630',
+            ]
+        ];
+        
+        $expected = "{created_at: <datetime>'1985-02-03T02:10:30+00:00'}";
+        
+        $this->assertSame($expected, QueryBuilder::build_object_str($data));
+    }
+
+    public function testShouldBuildObjectWithDatetimeInt()
+    {
+        $data = [
+            'created_at' => [
+                'type'  => 'datetime',
+                'value' => 476244630,
+            ]
+        ];
+        
+        $expected = "{created_at: <datetime>'1985-02-03T02:10:30+00:00'}";
+        
+        $this->assertSame($expected, QueryBuilder::build_object_str($data));
+    }
+
     public function testShouldExtractSurrealRecordIDFromPostID()
     {
         $data = [
             'image' => [
                 'type'  => 'record<image>',
                 'value' => 42,
+            ]
+        ];
+
+        $result = QueryBuilder::build_object_str($data);
+
+        $this->assertStringContainsString('image: <record<image>>image:abfsdfd897sdf9', $result, 'Should contain the image surreal record id');        
+    }
+
+
+    public function testShouldUseSurrealRecordIDIfPassedDirectly()
+    {
+        $data = [
+            'image' => [
+                'type'  => 'record<image>',
+                'value' => 'image:abfsdfd897sdf9',
             ]
         ];
 

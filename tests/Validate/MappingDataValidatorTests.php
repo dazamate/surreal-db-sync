@@ -96,12 +96,45 @@ class MappingDataValidatorTests extends TestCase {
         $this->assertStringContainsString( 'must be numeric', $errors[0] );
     }
 
-    public function testValidateDateTimeFieldSuccess(): void {
+    public function testValidateDateTimeFieldSuccessWithDateString(): void {
         // ISO 8601 example => 2025-01-26T18:29:00+00:00
         $mapping_data = [
             'published' => [
                 'type'  => 'datetime',
                 'value' => '2025-01-26T18:29:00+00:00',
+            ],
+        ];
+        $errors       = [];
+
+        $is_valid = MappingDataValidator::Validate( $mapping_data, $errors );
+
+        $this->assertTrue( $is_valid );
+        $this->assertEmpty( $errors );
+    }
+
+    public function testValidateDateTimeFieldSuccessWithTimeStampStr(): void {
+        // ISO 8601 example => 2025-01-26T18:29:00+00:00
+        $mapping_data = [
+            'published' => [
+                'type'  => 'datetime',
+                'value' => '345435435345',
+            ],
+        ];
+        $errors       = [];
+
+        $is_valid = MappingDataValidator::Validate( $mapping_data, $errors );
+
+        $this->assertTrue( $is_valid );
+        $this->assertEmpty( $errors );
+    }
+
+
+    public function testValidateDateTimeFieldSuccessWithTimeStampInt(): void {
+        // ISO 8601 example => 2025-01-26T18:29:00+00:00
+        $mapping_data = [
+            'published' => [
+                'type'  => 'datetime',
+                'value' => 345435435345,
             ],
         ];
         $errors       = [];
@@ -125,15 +158,31 @@ class MappingDataValidatorTests extends TestCase {
 
         $this->assertFalse( $is_valid );
         $this->assertNotEmpty( $errors );
-        $this->assertStringContainsString( 'must be a valid ISO8601 datetime string', $errors[0] );
+        $this->assertStringContainsString( 'must be a timestamp or a valid ISO8601 datetime string', $errors[0] );
     }
 
-    public function testValidateRecordFieldSuccess(): void {
+    public function testValidateRecordFieldSuccessWithPostID(): void {
         // For record type, value must be numeric post ID
         $mapping_data = [
             'author' => [
                 'type'  => 'record',
                 'value' => '123', // numeric string
+            ],
+        ];
+        $errors       = [];
+
+        $is_valid = MappingDataValidator::Validate( $mapping_data, $errors );
+
+        $this->assertTrue( $is_valid );
+        $this->assertEmpty( $errors );
+    }
+
+    public function testValidateRecordFieldSuccessWithRecordID(): void {
+        // For record type, value must be numeric post ID
+        $mapping_data = [
+            'author' => [
+                'type'  => 'record',
+                'value' => 'person:35r4', // numeric string
             ],
         ];
         $errors       = [];
@@ -157,7 +206,7 @@ class MappingDataValidatorTests extends TestCase {
 
         $this->assertFalse( $is_valid );
         $this->assertNotEmpty( $errors );
-        $this->assertStringContainsString( 'must be a numeric post ID', $errors[0] );
+        $this->assertStringContainsString('must be a surreal record id or a post ID for type=record.', $errors[0] );
     }
 
     public function testValidateArrayFieldSuccess(): void {
