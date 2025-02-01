@@ -1,3 +1,8 @@
+## Map Wordpress Post Type to Surreal Table Name ##
+```php
+    apply_filters('surreal_map_table_name', string $surreal_table_name, string $post_type, int $post_id): string;
+```    
+
 ## Mapping post types ##
 
 To map a post type to a surreal node, hook into this filter
@@ -5,6 +10,7 @@ To map a post type to a surreal node, hook into this filter
 ```php
     apply_filters('surreal_graph_map_{post_type}', array $mapped_data, int $post_id);
 ```
+
 When a product is created/updated/ this will be called for the post type to get a mapping of surreal types.
 
 ```php
@@ -63,23 +69,23 @@ When a product is created/updated/ this will be called for the post type to get 
 To add graph relations, tap into the following filter which will be called during post save
 
 ```php
-    apply_filters('surreal_sync_post_related_mapping', array $mappings, int $post_id, string $post_type);
+    apply_filters('surreal_graph_map_related', array $mappings, \WP_Post);
 ```
 
 Append arrays of data to the mappings array to add relations
 
 ```php 
-    add_filter('surreal_sync_post_related_mapping', $mappings, $post_id, $post_type): array {
-        if ($post_type !== 'order') return $mappings;
+    add_filter('surreal_graph_map_related', $mappings, $post): array {
+        if ($post->post_type !== 'order') return $mappings;
 
-        $products = get_relevent_products();
+        $products = get_relevent_products($post);
         $user_record_id = 'customer:978fd9sdf987df';
 
         foreach($products as $product) {
             $mappings[] = [
                 (required) 'from_record'   => $user_record_id,
                 (required) 'to_record'     => get_post_meta($product->ID, 'surreal_id', true),
-                (required) 'relation_name' => 'ordered',
+                (required) 'relation_table' => 'ordered',
                 'unique'        => false,
                 'data'          => [
                     'discounts' => [

@@ -10,16 +10,16 @@ class PostSyncService {
     const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
 
     public static function load_hooks() {
-        add_action('surreal_sync_post', [__CLASS__, 'sync_post'], 10, 3);
+        add_action('surreal_sync_post', [__CLASS__, 'sync_post'], 10, 4);
         add_action('surreal_delete_post', [__CLASS__, 'delete_post'], 10, 1);
     }
-
-    public static function sync_post(int $post_id, string $post_type, array $mapped_data) {
-        $node_type = apply_filters('surreal_graph_node_name', '', $post_type, $post_id);
+    
+    public static function sync_post(int $post_id, string $post_type, array $mapped_data, array $mapped_related_data) {
+        $surreal_table_name = apply_filters('surreal_map_table_name', '', $post_type, $post_id);
 
         // It's not a post type this plugin handles
-        if (empty($node_type)) {
-            ErrorManager::add($post_id, ['Unable to map the post type to surreal node type. Please register in filter surreal_graph_node_name']);
+        if (empty($surreal_table_name)) {
+            ErrorManager::add($post_id, ['Unable to map the post type to surreal node type. Please register in filter surreal_map_table_name']);
             return;
         }
 
@@ -28,7 +28,7 @@ class PostSyncService {
         $content_obj = QueryBuilder::build_object_str($mapped_data);
         $where_clause = 'post_id = ' . $post_id;
 
-        $q = "UPSERT {$node_type} CONTENT {$content_obj} WHERE {$where_clause} RETURN id;";
+        $q = "UPSERT {$surreal_table_name} CONTENT {$content_obj} WHERE {$where_clause} RETURN id;";
 
         $db = apply_filters('get_surreal_db_conn', null);
 
@@ -54,11 +54,9 @@ class PostSyncService {
         
         update_post_meta($post_id, 'surreal_id', $surreal_id);
         delete_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY);
-
-        $mappings = apply_filters('surreal_sync_post_related_mapping', [], $post_id, $post_type);
-
-        foreach($mappings as $mapping) {
-            self::map_relation($mapping, $db);
+ 
+        foreach($mapped_related_data as $mapping) {
+            self::do_relation_upsert_query($mapping, $db);
         }
     }
 
@@ -93,42 +91,17 @@ class PostSyncService {
         $res = $db->query($q);
     }
 
-    // TODO - move to different validate class
-    private static function validate_relation_data(array $relation_data): bool {
-        $required_keys = [
-            'from_record',
-            'to_record',
-            'relation_name'
-        ];
-        
-        $diff = array_diff_key(array_flip($required_keys), $relation_data);
-        
-        if (count($diff) > 0) {
-            ErrorManager::add(get_the_id(), [sprintf("Surreal mapping Error - Couldn't sync data. Missing keys: %s", implode(', ', $diff))]);
-            return false;
-        }
-
-        return true;
-    }
-
-    public static function map_relation(array $relation_data, \Surreal\Surreal $db) {
+    public static function do_relation_upsert_query(array $relation_data, \Surreal\Surreal $db) {
         $defaults = [
             'unique' => true
         ];
 
         $data = array_merge($defaults, $relation_data);
 
-        if (!self::validate_relation_data($data)) {
-            // echo '<pre>';
-            // var_dump('nope');
-            // echo '</pre>';
-            return;
-        }
-
         $q = QueryBuilder::build_relate_query(
             $data['from_record'],
             $data['to_record'],
-            $data['relation_name'],
+            $data['relation_table'],
             $data['data'],
             $data['unique']
         );

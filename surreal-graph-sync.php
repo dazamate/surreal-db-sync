@@ -14,15 +14,18 @@ require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 use Dazamate\SurrealGraphSync\Container;
 use Dazamate\SurrealGraphSync\Settings\AdminSettings;
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
+use Dazamate\SurrealGraphSync\Manager\UserSyncManager;
 use Dazamate\SurrealGraphSync\Migration\InitialMigration;
 use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
 use Dazamate\SurrealGraphSync\Service\PostSyncService;
 use Dazamate\SurrealGraphSync\Service\UserSyncService;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 
-use Dazamate\SurrealGraphSync\Mapper\ImageMapper;
-use Dazamate\SurrealGraphSync\Mapper\PostMapper;
-use Dazamate\SurrealGraphSync\Mapper\PersonMapper;
+use Dazamate\SurrealGraphSync\Mapper\Entity\ImageMapper;
+use Dazamate\SurrealGraphSync\Mapper\Entity\PostMapper;
+
+use Dazamate\SurrealGraphSync\Mapper\User\UserMapper;
+use Dazamate\SurrealGraphSync\Mapper\User\PersonMapper;
 
 add_action( 'plugins_loaded', function() {
     AdminSettings::load_hooks();
@@ -32,6 +35,7 @@ add_action( 'plugins_loaded', function() {
 
 add_action('init', function () {
     SyncManager::load_hooks();
+    UserSyncManager::load_hooks();
     InitialMigration::load_hooks();
     UserRelationsMigration::load_hooks();
     Container::load_hooks();
@@ -39,5 +43,7 @@ add_action('init', function () {
 
     ImageMapper::register();
     PostMapper::register();
+
+    UserMapper::register();
     PersonMapper::register();
 });

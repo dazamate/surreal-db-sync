@@ -1,17 +1,15 @@
 <?php
 
-namespace Dazamate\SurrealGraphSync\Mapper;
-
-use Dazamate\SurrealGraphSync\Mapper\ImagePostType;
+namespace Dazamate\SurrealGraphSync\Mapper\Entity;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class PostMapper {
     public static function register() {
-        add_filter('surreal_graph_node_name', [__CLASS__, 'get_node_type'], 10, 3);
+        add_filter('surreal_map_table_name', [__CLASS__, 'map_table_name'], 10, 3);
     }
 
-    public static function get_node_type($node_name, $post_type, $post_id) {
+    public static function map_table_name(string $node_name, string $post_type, int $post_id): string {
         if ($post_type === 'post') return 'article';
         return $node_name;
     }

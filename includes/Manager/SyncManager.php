@@ -2,7 +2,7 @@
 
 namespace Dazamate\SurrealGraphSync\Manager;
 
-use Dazamate\SurrealGraphSync\Mapper\PostMapper;
+use Dazamate\SurrealGraphSync\Mapper\Entity\PostMapper;
 use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
 use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
@@ -63,36 +63,60 @@ class SyncManager {
             return;
         }
 
-        ErrorManager::clear($post_id);
+        ErrorManager::clear($post_id);        
 
         // Allways map the generic post data, downstream filters can add/remove generic data
-        $mapped_data = PostMapper::map([], $post_id);
-        $mapped_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_data, $post_id);
+        $mapped_entity_data = PostMapper::map([], $post_id);
+        $mapped_entity_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_entity_data, $post_id);
 
         // validate the mapped data
         $errors = [];
         
-        if (!MappingDataValidator::validate($mapped_data, $errors)) {
+        if (!MappingDataValidator::validate($mapped_entity_data, $errors)) {
             ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB mapping error: %s", $e), $errors));
             return;
         }
 
-        $related_data_mappings = apply_filters('surreal_graph_build_relate_' . $post->post_type, [], $post_id);
+        $related_data_mappings = apply_filters('surreal_graph_map_related', [], $post);
         
-        foreach ($related_data_mappings as $related_data) {
-            if (!RelatedMappingDataValidator::validate($relate_data, $errors)) {
+        foreach ($related_data_mappings as $mapped_related_data) {
+            if (!RelatedMappingDataValidator::validate($mapped_related_data, $errors)) {
                 ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB related data mapping error: %s", $e), $errors));
             }
         }
 
         if (!empty($errors)) return;
 
-        foreach ($related_data_mappings as &$related_data) {
-            $relate_data['from_record'] = Inputs::parse_record_id($relate_data['from_record']);
-            $relate_data['to_record'] = Inputs::parse_record_id($relate_data['to_record']);
+        // This block coverts any post ids found in the 'from' or 'to' fields and goes to that post and gets the surreal record id
+        // Otherise it just passes the surreal record if it was directly placed in the mapping data
+        foreach ($related_data_mappings as &$mapped_related_data) {
+            $from_record = Inputs::parse_record_id($mapped_related_data['from_record']);
+
+            if (empty($from_record)) {
+                if (ctype($mapped_related_data['from_record'])) {
+                    ErrorManager::add($post_id, [sprintf("Coulen't get 'from' surreal record id from post_id: %d. It may need re-saving", $mapped_related_data['from_record'])]);
+                } else {
+                    ErrorManager::add($post_id, ["No surreal 'from' record id was set in the realtion mapping data."]);
+                }
+                return;
+            }
+            
+            $to_record =  Inputs::parse_record_id($mapped_related_data['to_record']);
+            
+            if (empty($mapped_related_data['to_record'])) {
+                if (ctype($mapped_related_data['from_record'])) {
+                    ErrorManager::add($post_id, [sprintf("Coulen't get surreal record id from post_id: %d. It may need re-saving", $mapped_related_data['to_record'])]);
+                } else {
+                    ErrorManager::add($post_id, ["No surreal 'to' record id was set in the realtion mapping data."]);
+                }
+                return;
+            }
+
+            $mapped_related_data['from_record'] = $from_record;
+            $mapped_related_data['to_record'] = $to_record;
         }
 
-        do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data, $relate_data);
+        do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_entity_data, $related_data_mappings);
     }
 
     public static function on_post_delete(int $post_id) {
