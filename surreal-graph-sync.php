@@ -20,6 +20,7 @@ use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
 use Dazamate\SurrealGraphSync\Service\PostSyncService;
 use Dazamate\SurrealGraphSync\Service\UserSyncService;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
+use Dazamate\SurrealGraphSync\Utils\UserErrorManager;
 
 use Dazamate\SurrealGraphSync\Mapper\Entity\ImageMapper;
 use Dazamate\SurrealGraphSync\Mapper\Entity\PostMapper;
@@ -31,15 +32,19 @@ add_action( 'plugins_loaded', function() {
     AdminSettings::load_hooks();
     PostSyncService::load_hooks();
     UserSyncService::load_hooks();
+
+    // Test user realtions
+    //add_action('')
+    
 });
 
-add_action('init', function () {
-    SyncManager::load_hooks();
-    UserSyncManager::load_hooks();
-    InitialMigration::load_hooks();
-    UserRelationsMigration::load_hooks();
+add_action('init', function () {    
     Container::load_hooks();
     ErrorManager::load_hooks();
+    UserErrorManager::load_hooks();
+    
+    SyncManager::load_hooks();
+    UserSyncManager::load_hooks();
 
     ImageMapper::register();
     PostMapper::register();

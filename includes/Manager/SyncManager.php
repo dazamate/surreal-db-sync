@@ -3,12 +3,8 @@
 namespace Dazamate\SurrealGraphSync\Manager;
 
 use Dazamate\SurrealGraphSync\Mapper\Entity\PostMapper;
-use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
-use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
-use Dazamate\SurrealGraphSync\Utils\Inputs;
-
-if ( ! defined( 'ABSPATH' ) ) exit;
+use Dazamate\SurrealGraphSync\PostType\ImagePostType;
 
 class SyncManager {
     const SURREAL_DB_ID_META_KEY = 'surreal_id';
@@ -24,6 +20,8 @@ class SyncManager {
         add_action('post_submitbox_misc_actions', [__CLASS__, 'render_surreal_id_info']);
         add_filter('admin_post_thumbnail_html', [__CLASS__, 'render_surreal_id_info_in_image_ui'], 10, 2);
         add_filter('attachment_fields_to_edit', [__CLASS__, 'render_surreal_id_attatchment_edit'], 10, 2);
+
+        add_filter('surreal_map_table_name', [__CLASS__, 'map_surreal_table_name'], 10, 3);
     }
 
     public static function render_surreal_id_info() {
@@ -63,82 +61,49 @@ class SyncManager {
             return;
         }
 
-        ErrorManager::clear($post_id);        
+        // Map the post type to a surreal table name (entity)
+        $surreal_table_name = apply_filters('surreal_map_table_name', '', $post->post_type, $post_id);
 
         // Allways map the generic post data, downstream filters can add/remove generic data
         $mapped_entity_data = PostMapper::map([], $post_id);
         $mapped_entity_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_entity_data, $post_id);
 
-        // validate the mapped data
-        $errors = [];
-        
-        if (!MappingDataValidator::validate($mapped_entity_data, $errors)) {
-            ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB mapping error: %s", $e), $errors));
-            return;
-        }
+        $related_data_mappings = apply_filters('surreal_graph_map_related', [], $post);        
 
-        $related_data_mappings = apply_filters('surreal_graph_map_related', [], $post);
-        
-        foreach ($related_data_mappings as $mapped_related_data) {
-            if (!RelatedMappingDataValidator::validate($mapped_related_data, $errors)) {
-                ErrorManager::add($post_id, array_map(fn($e) => sprintf("Surreal DB related data mapping error: %s", $e), $errors));
-            }
-        }
-
-        if (!empty($errors)) return;
-
-        // This block coverts any post ids found in the 'from' or 'to' fields and goes to that post and gets the surreal record id
-        // Otherise it just passes the surreal record if it was directly placed in the mapping data
-        foreach ($related_data_mappings as &$mapped_related_data) {
-            $from_record = Inputs::parse_record_id($mapped_related_data['from_record']);
-
-            if (empty($from_record)) {
-                if (ctype($mapped_related_data['from_record'])) {
-                    ErrorManager::add($post_id, [sprintf("Coulen't get 'from' surreal record id from post_id: %d. It may need re-saving", $mapped_related_data['from_record'])]);
-                } else {
-                    ErrorManager::add($post_id, ["No surreal 'from' record id was set in the realtion mapping data."]);
-                }
-                return;
-            }
-            
-            $to_record =  Inputs::parse_record_id($mapped_related_data['to_record']);
-            
-            if (empty($mapped_related_data['to_record'])) {
-                if (ctype($mapped_related_data['from_record'])) {
-                    ErrorManager::add($post_id, [sprintf("Coulen't get surreal record id from post_id: %d. It may need re-saving", $mapped_related_data['to_record'])]);
-                } else {
-                    ErrorManager::add($post_id, ["No surreal 'to' record id was set in the realtion mapping data."]);
-                }
-                return;
-            }
-
-            $mapped_related_data['from_record'] = $from_record;
-            $mapped_related_data['to_record'] = $to_record;
-        }
-
-        do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_entity_data, $related_data_mappings);
+        do_action('surreal_sync_post', $post_id, $surreal_table_name, $mapped_entity_data, $related_data_mappings);
     }
 
     public static function on_post_delete(int $post_id) {
         $post = get_post( $post_id );
-
         do_action('surreal_graph_delete_' . $post->post_type, $post_id, $post);
     }
 
     public static function on_attatchemnt_change(int $post_id) {
         $post = get_post($post_id);
+        $surreal_table_name = apply_filters('surreal_map_table_name', 'image', $post->post_type, $post_id);
 
         if (strpos($post->post_mime_type, 'image/') === 0) {
             $mapped_data = apply_filters('surreal_graph_map_image', [], $post_id);       
-            do_action('surreal_sync_post', $post_id, $post->post_type, $mapped_data);
+            do_action('surreal_sync_post', $post_id, $surreal_table_name, $mapped_data);
         }
+    }
+
+
+    public static function map_surreal_table_name(string $surreal_table_name, string $post_type, int $post_id) {
+        if ($post_type === ImagePostType::POST_TYPE)  {
+            if (strpos($post->post_mime_type, 'image/') === 0) {
+                return 'image';
+            }
+        }
+        return $surreal_table_name;
     }
 
     public static function on_attatchemnt_delete(int $post_id) {
         $post = get_post($post_id);
+        $surreal_table_name = apply_filters('surreal_map_table_name', 'image', $post->post_type, $post_id);
 
         if (strpos($post->post_mime_type, 'image/') === 0) {
-            do_action('surreal_delete_post', $post);
+            do_action('surreal_graph_delete_image', $post_id, $post);
         }
     }
 }

@@ -4,7 +4,7 @@ namespace Dazamate\SurrealGraphSync\Manager;
 
 use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
 use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
-use Dazamate\SurrealGraphSync\Utils\ErrorManager;
+use Dazamate\SurrealGraphSync\Utils\UserErrorManager;
 use Dazamate\SurrealGraphSync\Utils\Inputs;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -17,7 +17,7 @@ class UserSyncManager {
      */
     public static function load_hooks() {
         // Runs after a user is created (i.e., registration) in WP Admin or front end
-        add_action( 'user_register', [ __CLASS__, 'on_user_save' ], 10, 1 );
+        add_action( 'user_register', [ __CLASS__, 'on_user_create' ], 10, 2 );
 
         // Runs when a user is updated (e.g., profile_update). 
         // Hook signature: do_action( 'profile_update', $user_id, $old_user_data );
@@ -25,6 +25,11 @@ class UserSyncManager {
 
         // Runs just before a user is deleted. 
         add_action( 'delete_user', [ __CLASS__, 'on_user_delete' ], 10, 1 );
+    }
+
+    public static function on_user_create( int $user_id, array $userdata ) {
+        $user = get_userdata($user_id);
+        self::on_user_save($user_id, $user);
     }
 
     /**
@@ -36,72 +41,25 @@ class UserSyncManager {
             return;
         }
 
-        ErrorManager::clear( $user_id );
-      
         $user = get_userdata( $user_id );
 
         if ( ! ( $user instanceof \WP_User ) ) {
-            ErrorManager::add( $user_id, sprintf( "Surreal DB user mapping error: Unable to fetch user id %d", $user_id ) );
+            UserErrorManager::add( $user_id, [sprintf( "Surreal DB user mapping error: Unable to fetch user id %d", $user_id )] );
             return;
         }
 
         $user_role_map = [];
-
-        $user_role_map['person'] =  [
-            'editor',
-            'author',
-            'contributor',
-            'administrator'
-        ];
-
-        $user_role_map['user'] = [
-            'subscriber'
-        ];
-
         $user_role_map = apply_filters('surreal_graph_user_role_map', $user_role_map);
 
         foreach ($user_role_map as $surreal_user_type => $wordpress_user_types) {
             // If the user has the role that is mapped to this surreal type, then process with mapping the user as this type
-            if ( count( array_intersect( $user->roles, $wordpress_types ) ) > 0 ) {
-                $mapped_user_data = apply_filters('surreal_graph_map_user_' . $surreal_user_type, $mapped_data, $user );
+            if ( count( array_intersect( $user->roles, $wordpress_user_types ) ) > 0 ) {
+                $mapped_user_data = apply_filters('surreal_graph_map_user_' . $surreal_user_type, [], $user );
 
-                // Validate the mapped data
-                $errors = [];
-                if ( ! MappingDataValidator::validate( $mapped_user_data, $errors ) ) {
-                    ErrorManager::add( $user_id, array_map(
-                        fn( $e ) => sprintf( "Surreal DB user mapping error: %s", $e ),
-                        $errors
-                    ) );
-                    
-                    return;
-                }
-                
                 $related_data_mappings = apply_filters('surreal_graph_map_user_related', [], $surreal_user_type, $user);
 
-                // Validated mapped related data
-                foreach ( $related_data_mappings as $mapped_related_data ) {
-                    if ( ! RelatedMappingDataValidator::validate( $mapped_related_data, $errors ) ) {
-                        ErrorManager::add( $user_id, array_map(
-                            fn( $e ) => sprintf( "Surreal DB user type [%s] related data mapping error: %s", $e ),
-                            $surreal_user_type,
-                            $errors
-                        ) );
-                    }
-                }
-
-                // If validation errors exist, bail.
-                if ( ! empty( $errors ) ) {
-                    return;
-                }
-
-                // Parse any record IDs (if your Surreal logic is the same as for posts).
-                foreach ( $related_data_mappings as &$mapped_related_data ) {
-                    $relate_data['from_record'] = Inputs::parse_record_id( $mapped_related_data['from_record'] ?? '' );
-                    $relate_data['to_record']   = Inputs::parse_record_id( $mapped_related_data['to_record'] ?? '' );
-                }
-
                 // parse the records
-                do_action('surreal_sync_user', $post_id, $post->post_type, $mapped_data, $related_data_mappings);
+                do_action('surreal_sync_user', $user, $surreal_user_type, $mapped_user_data, $related_data_mappings);
             }
         }
     }

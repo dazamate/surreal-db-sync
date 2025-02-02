@@ -6,7 +6,8 @@ use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 
-class PostSyncService {
+
+class PostSyncService extends AbstractSyncService {
     const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
 
     public static function load_hooks() {
@@ -14,29 +15,41 @@ class PostSyncService {
         add_action('surreal_delete_post', [__CLASS__, 'delete_post'], 10, 1);
     }
     
-    public static function sync_post(int $post_id, string $post_type, array $mapped_data, array $mapped_related_data) {
-        $surreal_table_name = apply_filters('surreal_map_table_name', '', $post_type, $post_id);
+    public static function sync_post(int $post_id, string $mapped_table_name, array $mapped_entity_data, array $mapped_related_data) {     
+        ErrorManager::clear($post_id);
 
-        // It's not a post type this plugin handles
-        if (empty($surreal_table_name)) {
-            ErrorManager::add($post_id, ['Unable to map the post type to surreal node type. Please register in filter surreal_map_table_name']);
+        if (empty($mapped_table_name)) {
+            ErrorManager::add($post_id, ['No mapped table name found - you must use the "surreal_map_table_name" filter to map a post type to a Surreal DB table name']);
             return;
+        }
+
+        // No mapping done for this type
+        if (empty($mapped_entity_data)) {
+            return;
+        }
+
+        $errors = [];
+        
+        self::validate($mapped_entity_data, $mapped_related_data, $errors);
+
+        if (!empty($errors)) {
+            ErrorManager::add($post_id, $errors);
+            return false;
+        }
+
+        $db = self::get_surreal_db_conn($errors);
+
+        if (!empty($errors)) {
+            ErrorManager::add($post_id, $errors);
+            return false;
         }
 
         // Build the entire CONTENT clause to set/update all the fields
         // Note, SET can be used if you want to append data, not override all 
-        $content_obj = QueryBuilder::build_object_str($mapped_data);
+        $content_obj = QueryBuilder::build_object_str($mapped_entity_data);
         $where_clause = 'post_id = ' . $post_id;
 
-        $q = "UPSERT {$surreal_table_name} CONTENT {$content_obj} WHERE {$where_clause} RETURN id;";
-
-        $db = apply_filters('get_surreal_db_conn', null);
-
-        if ( ! ( $db instanceof \Surreal\Surreal ) ) {
-            ErrorManager::add($post_id, ['Surreal sync error: Unable to establish database connection']);
-            error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
-            return;
-        }
+        $q = "UPSERT {$mapped_table_name} CONTENT {$content_obj} WHERE {$where_clause} RETURN id;";        
 
         try {
             $res = $db->query($q);
@@ -53,19 +66,10 @@ class PostSyncService {
         }
         
         update_post_meta($post_id, 'surreal_id', $surreal_id);
-        delete_post_meta($post_id, self::SURREAL_SYNC_ERROR_META_KEY);
  
         foreach($mapped_related_data as $mapping) {
             self::do_relation_upsert_query($mapping, $db);
         }
-    }
-
-    private static function try_get_record_id_from_response(array $res): ?string {
-        if ($res[0][0]['id'] instanceof \Surreal\Cbor\Types\Record\RecordId) {
-            return $res[0][0]['id']->toString();
-        }
-
-        return $res[0][0]['id'] ?? null;
     }
 
     public static function delete_post(\WP_Post $post): void {
@@ -87,24 +91,6 @@ class PostSyncService {
             error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
             return;
         }
-
-        $res = $db->query($q);
-    }
-
-    public static function do_relation_upsert_query(array $relation_data, \Surreal\Surreal $db) {
-        $defaults = [
-            'unique' => true
-        ];
-
-        $data = array_merge($defaults, $relation_data);
-
-        $q = QueryBuilder::build_relate_query(
-            $data['from_record'],
-            $data['to_record'],
-            $data['relation_table'],
-            $data['data'],
-            $data['unique']
-        );
 
         $res = $db->query($q);
     }

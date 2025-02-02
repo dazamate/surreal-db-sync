@@ -7,6 +7,15 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class UserMapper {    
     public static function register() {
         add_filter('surreal_graph_map_user_user', [__CLASS__, 'map'], 10, 2);
+        add_filter('surreal_graph_user_role_map', [__CLASS__, 'map_user_roles_to_surreal_type'], 10, 1);
+    }
+
+    public static function map_user_roles_to_surreal_type(array $user_role_map): array {
+        $user_role_map['user'] = [
+            'subscriber'
+        ];
+
+        return $user_role_map;
     }
 
     public static function map(array $mapped_data, \WP_User $user): array {
@@ -24,5 +33,12 @@ class UserMapper {
             'type' => 'string',
             'value' => $user->display_name
         ];
+
+        $mapped_data['user_id'] =  [
+            'type' => 'number',
+            'value' => $user->ID
+        ];
+
+        return $mapped_data;
     }
 }
