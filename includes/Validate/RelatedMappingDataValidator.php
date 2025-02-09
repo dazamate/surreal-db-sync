@@ -32,7 +32,7 @@ class RelatedMappingDataValidator {
             empty($relate_data['from_record']) ||
             (
                 ! InputValidator::is_surreal_db_record($relate_data['from_record']) &&
-                ! ctype_digit($relate_data['from_record'])
+                ! ctype_digit((string)$relate_data['from_record'])
             )
         ) {
             $errors[] = 'Invalid or missing "from_record" in relation data.';
@@ -44,7 +44,7 @@ class RelatedMappingDataValidator {
             empty($relate_data['to_record']) ||
             (
                 ! InputValidator::is_surreal_db_record($relate_data['to_record']) &&
-                ! ctype_digit($relate_data['to_record'])
+                ! ctype_digit((string)$relate_data['to_record'])
             )
         ) {
             $errors[] = 'Invalid or missing "to_record" in relation data.';

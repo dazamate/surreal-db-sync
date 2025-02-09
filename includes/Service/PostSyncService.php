@@ -5,6 +5,8 @@ namespace Dazamate\SurrealGraphSync\Service;
 use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
+use Dazamate\SurrealGraphSync\Enum\QueryType;
+use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
 
 class PostSyncService extends AbstractSyncService {
@@ -30,7 +32,7 @@ class PostSyncService extends AbstractSyncService {
 
         $errors = [];
         
-        self::validate($mapped_entity_data, $mapped_related_data, $errors);
+        self::validate($mapped_entity_data, $mapped_related_data, QueryType::POST, $errors);
 
         if (!empty($errors)) {
             ErrorManager::add($post_id, $errors);
@@ -65,7 +67,7 @@ class PostSyncService extends AbstractSyncService {
             return;
         }
         
-        update_post_meta($post_id, 'surreal_id', $surreal_id);
+        update_post_meta($post_id, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, $surreal_id);
  
         foreach($mapped_related_data as $mapping) {
             self::do_relation_upsert_query($mapping, $db);
@@ -73,7 +75,7 @@ class PostSyncService extends AbstractSyncService {
     }
 
     public static function delete_post(\WP_Post $post): void {
-        $surreal_record_id = get_post_meta($post->ID, SyncManager::SURREAL_DB_ID_META_KEY, true);
+        $surreal_record_id = get_post_meta($post->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
 
         // Extra checks so we dont accidently run a DELETE all command when there is a missing record argument
         if (

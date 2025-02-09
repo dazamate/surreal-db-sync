@@ -8,7 +8,7 @@
 To map a post type to a surreal node, hook into this filter
 
 ```php
-    apply_filters('surreal_graph_map_{post_type}', array $mapped_data, int $post_id);
+    apply_filters('surreal_graph_map_{post_type}', array $mapped_entity_data, int $post_id);
 ```
 
 When a product is created/updated/ this will be called for the post type to get a mapping of surreal types.
@@ -69,7 +69,7 @@ When a product is created/updated/ this will be called for the post type to get 
 To add graph relations, tap into the following filter which will be called during post save
 
 ```php
-    apply_filters('surreal_graph_map_related', array $mappings, \WP_Post);
+    apply_filters('surreal_graph_map_related', array $mappings, \WP_Post $post);
 ```
 
 Append arrays of data to the mappings array to add relations
@@ -83,16 +83,16 @@ Append arrays of data to the mappings array to add relations
 
         foreach($products as $product) {
             $mappings[] = [
-                (required) 'from_record'   => $user_record_id,
-                (required) 'to_record'     => get_post_meta($product->ID, 'surreal_id', true),
+                (required) 'from_record'    => $user_record_id,
+                (required) 'to_record'      => get_post_meta($product->ID, 'surreal_id', true),
                 (required) 'relation_table' => 'ordered',
-                'unique'        => false,
-                'data'          => [
-                    'discounts' => [
+                'unique'                    => false, // if multiple of the same relations is allowed or not
+                'data'                      => [
+                    'discounts'             => [
                         'type' => 'number',
                         'value' => 0.2
                     ],
-                    'coupons' => [
+                    'coupons'               => [
                         'type' => 'array',
                         'value' => [
                             ...
@@ -104,6 +104,66 @@ Append arrays of data to the mappings array to add relations
 
         return $mappings;
     }
+```
+
+## User Mapping ##
+
+To map a user to a Sureral table type, first map the user roles to a type with this filter.
+
+The key of the array is the table name in Surreal, and the values are the wordpress role types that will be mapped to this table.
+
+You can apply the role to multiple tables if you want.
+
+```php
+    add_filter('surreal_graph_user_role_map', function(array $user_role_map) {
+        $user_role_map['person'] = [
+            'editor',
+            'author',
+            'contributor',
+            'administrator'
+        ];
+
+        return $user_role_map;
+    });
+```
+
+To map the user data you can follow the similar pattern as the entity types, hook into this filter.
+But this filter wants the surreal type in the filter name
+
+```php
+    add_filter('surreal_graph_map_user_' . $surreal_user_type, function (array $mapped_data, \WP_User $user): array {
+        $mapped_data['username'] =  [
+            'type' => 'string',
+            'value' => $user->user_login
+        ];
+
+        $mapped_data['email'] =  [
+            'type' => 'string',
+            'value' => $user->user_email
+        ];
+
+        $mapped_data['display_name'] =  [
+            'type' => 'string',
+            'value' => $user->display_name
+        ];
+
+        $mapped_data['user_id'] =  [
+            'type' => 'number',
+            'value' => $user->ID
+        ];
+
+        return $mapped_data;
+    });
+```
+
+Mapping User realted data can be achieve with this filter
+
+```php
+    add_filter('surreal_graph_map_user_related', function(array $mapped_realtions, string $surreal_user_type, \WP_User $user): array {
+        
+
+        return $mapped_realtions;
+    });
 ```
 
 ##Migrations (Sidelined at the moment)##

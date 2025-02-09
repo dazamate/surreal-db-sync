@@ -7,6 +7,8 @@ use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
 use Dazamate\SurrealGraphSync\Utils\UserErrorManager;
 use Dazamate\SurrealGraphSync\Utils\Inputs;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
+use Dazamate\SurrealGraphSync\Enum\QueryType;
+use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
 class UserSyncService extends AbstractSyncService {
     /**
@@ -16,11 +18,11 @@ class UserSyncService extends AbstractSyncService {
         add_action('surreal_sync_user', [__CLASS__, 'sync_user'], 10, 4);
     }    
 
-    public static function sync_user(\Wp_User $user, string $mapped_table_name, array $mapped_user_data, array $mapped_related_data) {
+    public static function sync_user(\WP_User $user, string $mapped_table_name, array $mapped_user_data, array $mapped_related_data) {       
         UserErrorManager::clear($user->ID);
 
         if (empty($mapped_table_name)) {
-            UserErrorManager::add($$user->ID, ['No mapped user table name found - you must use the "surreal_map_table_name" filter to map a post type to a Surreal DB table name']);
+            UserErrorManager::add($user->ID, ['No mapped user table name found - you must use the "surreal_map_table_name" filter to map a post type to a Surreal DB table name']);
             return;
         }
 
@@ -31,7 +33,7 @@ class UserSyncService extends AbstractSyncService {
 
         $errors = [];
         
-        self::validate($mapped_user_data, $mapped_related_data, $errors);
+        self::validate($mapped_user_data, $mapped_related_data, QueryType::USER, $errors);
 
         if (!empty($errors)) {
             UserErrorManager::add($user->ID, $errors);
@@ -54,11 +56,11 @@ class UserSyncService extends AbstractSyncService {
 
         try {
             $res = $db->query($q);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             UserErrorManager::add($user->ID, [sprintf("Surreal query error: %s", $e->getMessage())]);
             return;
         }
-
+        
         $surreal_id = self::try_get_record_id_from_response($res);
 
         if (empty($surreal_id)) {
@@ -66,7 +68,7 @@ class UserSyncService extends AbstractSyncService {
             return;
         }
         
-        update_post_meta($user->ID, 'surreal_id', $surreal_id);
+        update_user_meta($user->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, $surreal_id);
  
         foreach($mapped_related_data as $mapping) {
             self::do_relation_upsert_query($mapping, $db);

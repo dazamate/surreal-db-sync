@@ -2,26 +2,26 @@
 
 namespace Dazamate\SurrealGraphSync\Utils;
 
-class ErrorManager {
-    private const META_KEY = '_surreal_sync_error_messages';
+use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
+class ErrorManager {
     public static function load_hooks() {
         add_action('admin_notices', [__CLASS__, 'display_errors']);
     }
 
     public static function add(int $post_id, array $errors): void {
-        $existing = get_post_meta($post_id, self::META_KEY, true);
+        $existing = get_post_meta($post_id, MetaKeys::SURREAL_SYNC_ERROR_META_KEY->value, true);
 
         if (!is_array($existing))  $existing = [];
 
         $merged = array_merge($existing, $errors);
 
-        update_post_meta($post_id, self::META_KEY, $merged);
+        update_post_meta($post_id, MetaKeys::SURREAL_SYNC_ERROR_META_KEY->value, $merged);
     }
     
     public static function display_errors(): void {      
         $post_id = get_the_id();  
-        $errors = get_post_meta($post_id, self::META_KEY, true);
+        $errors = get_post_meta($post_id, MetaKeys::SURREAL_SYNC_ERROR_META_KEY->value, true);
 
         if (!empty($errors)) {
             foreach ($errors as $message) {
@@ -36,6 +36,6 @@ class ErrorManager {
     }
     
     public static function clear(int $post_id): void {
-        delete_post_meta($post_id, self::META_KEY);
+        delete_post_meta($post_id, MetaKeys::SURREAL_SYNC_ERROR_META_KEY->value);
     }
 }

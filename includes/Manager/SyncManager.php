@@ -5,10 +5,9 @@ namespace Dazamate\SurrealGraphSync\Manager;
 use Dazamate\SurrealGraphSync\Mapper\Entity\PostMapper;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 use Dazamate\SurrealGraphSync\PostType\ImagePostType;
+use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
 class SyncManager {
-    const SURREAL_DB_ID_META_KEY = 'surreal_id';
-
     public static function load_hooks() {
         add_action('save_post', [__CLASS__, 'on_post_save'], 100, 3);
         add_action('before_delete_post', [__CLASS__, 'on_post_delete'], 10, 1);
@@ -27,12 +26,12 @@ class SyncManager {
     public static function render_surreal_id_info() {
         echo '<div class="misc-pub-section misc-pub-db-id-info">';
             echo 'Surreal ID: <br>';
-            printf('<span><b>%s</b></span>', get_post_meta(get_the_id(), self::SURREAL_DB_ID_META_KEY, true));
+            printf('<span><b>%s</b></span>', get_post_meta(get_the_id(), MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true));
         echo '</div>';
     }
 
     public static function render_surreal_id_info_in_image_ui($content, $post_id) {
-        $surreal_id = get_post_meta($post_id, self::SURREAL_DB_ID_META_KEY, true);
+        $surreal_id = get_post_meta($post_id, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
 
         $html = '<div class="surreal-image-info" style="margin-top: 10px;">';
         $html .= 'Surreal ID: <strong>' . esc_html($surreal_id) . '</strong>';
@@ -42,7 +41,7 @@ class SyncManager {
     }
 
     public static function render_surreal_id_attatchment_edit($form_fields, $post) {
-        $surreal_id = get_post_meta($post->ID, self::SURREAL_DB_ID_META_KEY, true);
+        $surreal_id = get_post_meta($post->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
 
         $form_fields['surreal_db_id_field'] = [
             'label' => 'Surreal ID',

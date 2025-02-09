@@ -6,12 +6,11 @@ use Dazamate\SurrealGraphSync\Validate\MappingDataValidator;
 use Dazamate\SurrealGraphSync\Validate\RelatedMappingDataValidator;
 use Dazamate\SurrealGraphSync\Utils\UserErrorManager;
 use Dazamate\SurrealGraphSync\Utils\Inputs;
+use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 class UserSyncManager {
-    const SURREAL_DB_ID_META_KEY = 'surreal_id';
-
     /**
      * Attach all hooks required for user sync.
      */
@@ -25,11 +24,29 @@ class UserSyncManager {
 
         // Runs just before a user is deleted. 
         add_action( 'delete_user', [ __CLASS__, 'on_user_delete' ], 10, 1 );
+
+        add_action( 'show_user_profile', [ __CLASS__, 'render_surreal_id_user_info' ], 10);
+        add_action( 'edit_user_profile', [ __CLASS__, 'render_surreal_id_user_info' ], 10);
     }
 
     public static function on_user_create( int $user_id, array $userdata ) {
         $user = get_userdata($user_id);
         self::on_user_save($user_id, $user);
+    }
+
+    public static function render_surreal_id_user_info( \WP_User $user ) {
+        $surreal_id = get_user_meta( $user->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true );
+        ?>
+        <h3>Surreal ID Information</h3>
+        <table class="form-table">
+            <tr>
+                <th><label>Surreal ID</label></th>
+                <td>
+                    <span><b><?php echo ! empty( $surreal_id ) ? esc_html( $surreal_id ) : 'No Surreal ID found'; ?></b></span>
+                </td>
+            </tr>
+        </table>
+        <?php
     }
 
     /**
