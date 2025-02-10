@@ -115,7 +115,7 @@ The key of the array is the table name in Surreal, and the values are the wordpr
 You can apply the role to multiple tables if you want.
 
 ```php
-    add_filter('surreal_graph_user_role_map', function(array $user_role_map) {
+    add_filter('surreal_graph_user_role_map', function(array $user_role_map): array {
         $user_role_map['person'] = [
             'editor',
             'author',
@@ -160,7 +160,20 @@ Mapping User realted data can be achieve with this filter
 
 ```php
     add_filter('surreal_graph_map_user_related', function(array $mapped_realtions, string $surreal_user_type, \WP_User $user): array {
-        
+        $friends_mapping = [
+            'from_record'       => $user->ID,
+            'to_record'         => get_another_user_id(),
+            'relation_table'    => 'friends_with',
+            'unique'            => true,
+            'data'              => [
+                'years' => [
+                    'type' => 'number',
+                    'value' => 15
+                ]
+            ]
+        ];
+
+        $mapped[] = $friends_mapping;
 
         return $mapped_realtions;
     });

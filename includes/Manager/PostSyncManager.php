@@ -7,7 +7,7 @@ use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 use Dazamate\SurrealGraphSync\PostType\ImagePostType;
 use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
-class SyncManager {
+class PostSyncManager {
     public static function load_hooks() {
         add_action('save_post', [__CLASS__, 'on_post_save'], 100, 3);
         add_action('before_delete_post', [__CLASS__, 'on_post_delete'], 10, 1);
@@ -73,8 +73,12 @@ class SyncManager {
     }
 
     public static function on_post_delete(int $post_id) {
-        $post = get_post( $post_id );
-        do_action('surreal_graph_delete_' . $post->post_type, $post_id, $post);
+        $surreal_record_id = get_post_meta($post_id, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
+    
+        // Make sure we have data
+        if ( $surreal_record_id === false ) return;
+
+        do_action('surreal_graph_delete_record', $surreal_record_id);        
     }
 
     public static function on_attatchemnt_change(int $post_id) {
@@ -87,7 +91,6 @@ class SyncManager {
         }
     }
 
-
     public static function map_surreal_table_name(string $surreal_table_name, string $post_type, int $post_id) {
         if ($post_type === ImagePostType::POST_TYPE)  {
             if (strpos($post->post_mime_type, 'image/') === 0) {
@@ -99,10 +102,14 @@ class SyncManager {
 
     public static function on_attatchemnt_delete(int $post_id) {
         $post = get_post($post_id);
-        $surreal_table_name = apply_filters('surreal_map_table_name', 'image', $post->post_type, $post_id);
 
-        if (strpos($post->post_mime_type, 'image/') === 0) {
-            do_action('surreal_graph_delete_image', $post_id, $post);
+        if (strpos($post->post_mime_type, 'image/') === 0) {     
+            $surreal_record_id = get_post_meta($post_id, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
+        
+            // Make sure we have data
+            if ( $surreal_record_id === false ) return;
+
+            do_action('surreal_delete_record', $surreal_record_id);
         }
     }
 }

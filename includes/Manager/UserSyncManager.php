@@ -59,7 +59,7 @@ class UserSyncManager {
         }
 
         $user = get_userdata( $user_id );
-
+        
         if ( ! ( $user instanceof \WP_User ) ) {
             UserErrorManager::add( $user_id, [sprintf( "Surreal DB user mapping error: Unable to fetch user id %d", $user_id )] );
             return;
@@ -81,14 +81,12 @@ class UserSyncManager {
         }
     }
 
-    /**
-     * Handle user deletion in SurrealDB.
-     *
-     * @param int $user_id
-     */
-    public static function on_user_delete( $user_id ) {
-        $user = get_user_by( 'ID', $user_id );
-        // Provide an action similar to posts, so any Surreal sync logic can delete the user there
-        do_action( 'surreal_graph_delete_user', $user_id, $user );
+    public static function on_user_delete( int $user_id ) {
+        $surreal_record_id = get_user_meta($user_id, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
+
+        // Make sure we have data
+        if ( $surreal_record_id === false ) return;
+
+        do_action('surreal_delete_record', $surreal_record_id);
     }
 }

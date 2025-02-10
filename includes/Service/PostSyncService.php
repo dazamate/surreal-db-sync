@@ -2,19 +2,16 @@
 
 namespace Dazamate\SurrealGraphSync\Service;
 
-use Dazamate\SurrealGraphSync\Manager\SyncManager;
 use Dazamate\SurrealGraphSync\Query\QueryBuilder;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
 use Dazamate\SurrealGraphSync\Enum\QueryType;
 use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
-
-class PostSyncService extends AbstractSyncService {
+class PostSyncService extends SyncService {
     const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
 
     public static function load_hooks() {
         add_action('surreal_sync_post', [__CLASS__, 'sync_post'], 10, 4);
-        add_action('surreal_delete_post', [__CLASS__, 'delete_post'], 10, 1);
     }
     
     public static function sync_post(int $post_id, string $mapped_table_name, array $mapped_entity_data, array $mapped_related_data) {     
@@ -72,28 +69,5 @@ class PostSyncService extends AbstractSyncService {
         foreach($mapped_related_data as $mapping) {
             self::do_relation_upsert_query($mapping, $db);
         }
-    }
-
-    public static function delete_post(\WP_Post $post): void {
-        $surreal_record_id = get_post_meta($post->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, true);
-
-        // Extra checks so we dont accidently run a DELETE all command when there is a missing record argument
-        if (
-            $surreal_record_id === false ||                 // Make sure we have data
-            strlen($surreal_record_id) < 1 ||               // Make sure string is more than 1 char
-            strpos($surreal_record_id, ':') === false       // Make sure it has the record delimiter
-        ) return;
-        
-        $q = "DELETE $surreal_record_id";
-
-        $db = apply_filters('get_surreal_db_conn', null);
-
-        if ( ! ( $db instanceof \Surreal\Surreal ) ) {
-            ErrorManager::add($post->ID, ['Unable to get Surreal DB connection']);
-            error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
-            return;
-        }
-
-        $res = $db->query($q);
     }
 }

@@ -9,8 +9,12 @@ use Dazamate\SurrealGraphSync\Utils\Inputs;
 use Dazamate\SurrealGraphSync\Enum\QueryType;
 use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
-class AbstractSyncService {
+class SyncService {
     const SURREAL_SYNC_ERROR_META_KEY = 'surreal_sync_error';
+
+    public static function load_hooks() {
+        add_action('surreal_delete_record', [__CLASS__, 'delete_record']);
+    }
 
     protected static function get_surreal_db_conn(array $errors): ?\Surreal\Surreal {
         $db = apply_filters('get_surreal_db_conn', null);
@@ -131,5 +135,26 @@ class AbstractSyncService {
         );
 
         $res = $db->query($q);
+    }
+
+    public static function delete_record(string $surreal_record_id): bool {
+        // Extra checks so we dont accidently run a DELETE all command when there is a missing record argument
+        if (
+            strlen($surreal_record_id) < 1 ||               // Make sure string is more than 1 char
+            strpos($surreal_record_id, ':') === false       // Make sure it has the record delimiter
+        ) return false;
+        
+        $q = "DELETE $surreal_record_id";
+
+        $db = apply_filters('get_surreal_db_conn', null);
+
+        if ( ! ( $db instanceof \Surreal\Surreal ) ) {
+            error_log('Unable to get Surreal DB connection ' . __FUNCTION__ . ' ' . __LINE__);
+            return false;
+        }
+
+        $res = $db->query($q);
+
+        return true;
     }
 }

@@ -13,10 +13,12 @@ require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
 use Dazamate\SurrealGraphSync\Container;
 use Dazamate\SurrealGraphSync\Settings\AdminSettings;
-use Dazamate\SurrealGraphSync\Manager\SyncManager;
+use Dazamate\SurrealGraphSync\Manager\PostSyncManager;
 use Dazamate\SurrealGraphSync\Manager\UserSyncManager;
 use Dazamate\SurrealGraphSync\Migration\InitialMigration;
 use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
+
+use Dazamate\SurrealGraphSync\Service\SyncService;
 use Dazamate\SurrealGraphSync\Service\PostSyncService;
 use Dazamate\SurrealGraphSync\Service\UserSyncService;
 use Dazamate\SurrealGraphSync\Utils\ErrorManager;
@@ -35,29 +37,30 @@ add_action( 'plugins_loaded', function() {
     if ( ! Container::has_db_conn() ) return;
 
     AdminSettings::load_hooks();
+    SyncService::load_hooks();
     PostSyncService::load_hooks();
     UserSyncService::load_hooks();
 
     // Test user realtions
-    add_filter('surreal_graph_map_user_related', function(array $mapped, string $surreal_user_type, \WP_User $user): array {
-        if ($user->ID === 8) return $mapped; 
+    // add_filter('surreal_graph_map_user_related', function(array $mapped, string $surreal_user_type, \WP_User $user): array {
+    //     if ($user->ID === 8) return $mapped; 
         
-        $friends_mapping = [
-            'from_record'       => $user->ID,
-            'to_record'         => 8,
-            'relation_table'    => 'friends_with',
-            'unique'            => true,
-            'data'              => [
-                'years' => [
-                    'type' => 'number',
-                    'value' => 42
-                ]
-            ]
-        ];
+    //     $friends_mapping = [
+    //         'from_record'       => $user->ID,
+    //         'to_record'         => 8,
+    //         'relation_table'    => 'friends_with',
+    //         'unique'            => true,
+    //         'data'              => [
+    //             'years' => [
+    //                 'type' => 'number',
+    //                 'value' => 42
+    //             ]
+    //         ]
+    //     ];
 
-        $mapped[] = $friends_mapping;        
-        return $mapped;
-    }, 10, 3);
+    //     $mapped[] = $friends_mapping;
+    //     return $mapped;
+    // }, 10, 3);
     
 });
 
@@ -67,7 +70,7 @@ add_action('init', function () {
     ErrorManager::load_hooks();
     UserErrorManager::load_hooks();
     
-    SyncManager::load_hooks();
+    PostSyncManager::load_hooks();
     UserSyncManager::load_hooks();
 
     ImageMapper::register();

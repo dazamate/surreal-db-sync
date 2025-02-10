@@ -10,7 +10,7 @@ use Dazamate\SurrealGraphSync\Query\QueryBuilder;
 use Dazamate\SurrealGraphSync\Enum\QueryType;
 use Dazamate\SurrealGraphSync\Enum\MetaKeys;
 
-class UserSyncService extends AbstractSyncService {
+class UserSyncService extends SyncService {
     /**
      * Attach all hooks required for user sync.
      */
