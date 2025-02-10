@@ -50,15 +50,21 @@ class PostSyncManager {
                 '<input type="text" readonly style="width:100%%;" value="%s" />',
                 esc_attr($surreal_id ?? '')
             )
-        ];       
+        ];
     
         return $form_fields;
     }
 
     public static function on_post_save(int $post_id, \WP_Post $post, bool $update) {
-        if ( wp_is_post_revision( $post_id ) || defined( '\DOING_AJAX' ) ) {
-            return;
-        }
+        if ( 'draft' === $post->post_status || wp_is_post_revision( $post_id ) || defined( '\DOING_AJAX' ) ) return;
+        
+        // Ignore trying to sync drafts
+        $ignore_post_states = [
+            'draft',
+            'auto-draft'
+        ];
+
+        if (in_array($post->post_status, $ignore_post_states)) return;
 
         // Map the post type to a surreal table name (entity)
         $surreal_table_name = apply_filters('surreal_map_table_name', '', $post->post_type, $post_id);
@@ -67,7 +73,9 @@ class PostSyncManager {
         $mapped_entity_data = PostMapper::map([], $post_id);
         $mapped_entity_data = apply_filters('surreal_graph_map_' . $post->post_type, $mapped_entity_data, $post_id);
 
-        $related_data_mappings = apply_filters('surreal_graph_map_related', [], $post);        
+        $related_data_mappings = apply_filters('surreal_graph_map_related', [], $post);
+
+        //echo '<pre>'; var_dump($related_data_mappings); exit;
 
         do_action('surreal_sync_post', $post_id, $surreal_table_name, $mapped_entity_data, $related_data_mappings);
     }
@@ -78,7 +86,7 @@ class PostSyncManager {
         // Make sure we have data
         if ( $surreal_record_id === false ) return;
 
-        do_action('surreal_graph_delete_record', $surreal_record_id);        
+        do_action('surreal_delete_record', $surreal_record_id);        
     }
 
     public static function on_attatchemnt_change(int $post_id) {

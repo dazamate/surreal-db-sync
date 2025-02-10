@@ -21,7 +21,7 @@ class PostMapper {
             'value' => $post->post_title,
             'type' => 'string'
         ];
-
+        
         $mapped_data['content'] = [
             'value' => $post->post_content,
             'type' => 'string'

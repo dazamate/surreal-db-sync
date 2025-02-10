@@ -52,7 +52,15 @@ class SyncService {
         }
 
         if (!empty($validate_errors)) {
-            $validate_errors = array_map(fn($e) => sprintf("Surreal DB '%s' related data mapping error: %s", 'user', $e), $validate_errors);
+            $validate_errors = array_map(fn($e) => 
+                sprintf(
+                    "Surreal DB '%s' related data mapping error: %s",
+                    $mapped_related_data['relation_table'] ?? 'realtion not set',
+                    $e
+                ),
+                $validate_errors
+            );
+            
             $errors = array_merge($validate_errors, $errors);
             return false;
         }
