@@ -33,7 +33,7 @@ class UserSyncService extends SyncService {
 
         $errors = [];
         
-        self::validate($mapped_user_data, $mapped_related_data, QueryType::USER, $errors);
+        self::validate($mapped_user_data, QueryType::USER, $errors);
 
         if (!empty($errors)) {
             UserErrorManager::add($user->ID, $errors);
@@ -69,6 +69,14 @@ class UserSyncService extends SyncService {
         }
         
         update_user_meta($user->ID, MetaKeys::SURREAL_DB_RECORD_ID_META_KEY->value, $surreal_id);
+
+        // Only validate after we save the user and get a surreal id
+        self::validate_relation_mapping($mapped_related_data, QueryType::USER, $errors);
+
+        if (!empty($errors)) {
+            UserErrorManager::add($user->ID, $errors);
+            return false;
+        }
  
         foreach($mapped_related_data as $mapping) {
             self::do_relation_upsert_query($mapping, $db);
