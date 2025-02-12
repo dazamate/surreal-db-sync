@@ -110,13 +110,13 @@ class PostSyncManager {
 
         if (strpos($post->post_mime_type, 'image/') === 0) {
             $mapped_data = apply_filters('surreal_graph_map_image', [], $post_id);       
-            do_action('surreal_sync_post', $post_id, $surreal_table_name, $mapped_data);
+            do_action('surreal_sync_post', $post, $surreal_table_name, $mapped_data);
         }
     }
 
     public static function map_surreal_table_name(string $surreal_table_name, string $post_type, int $post_id) {
         if ($post_type === ImagePostType::POST_TYPE)  {
-            if (strpos($post->post_mime_type, 'image/') === 0) {
+            if (strpos($post_type, 'image/') === 0) {
                 return 'image';
             }
         }
