@@ -36,12 +36,16 @@ class SyncService {
         return $res[0][0]['id'] ?? null;
     }
 
-    public static function validate(array $mapped_entity_data, array &$related_data_mappings, QueryType $query_type, array &$errors): bool {        
+    public static function validate(array $mapped_entity_data, QueryType $query_type, array &$errors): bool {        
         if (!MappingDataValidator::validate($mapped_entity_data, $errors)) {
             $errors = array_map(fn($e) => sprintf("Surreal DB '%s' mapping error: %s", $e, $mapped_entity_data), $errors);
             return false;
         }
+        
+        return true;
+    }
 
+    public static function validate_relation_mapping(array &$related_data_mappings, QueryType $query_type, array &$errors): bool {
         $validate_errors = [];
 
         foreach ($related_data_mappings as $mapped_related_data) {
@@ -64,7 +68,7 @@ class SyncService {
             $errors = array_merge($validate_errors, $errors);
             return false;
         }
-
+        
         // This block coverts any post ids found in the 'from' or 'to' fields and goes to that post and gets the surreal record id
         // Otherise it just passes the surreal record if it was directly placed in the mapping data
         foreach ($related_data_mappings as &$mapped_related_data) {
