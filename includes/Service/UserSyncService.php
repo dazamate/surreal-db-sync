@@ -37,7 +37,7 @@ class UserSyncService extends SyncService {
 
         if (!empty($errors)) {
             UserErrorManager::add($user->ID, $errors);
-            return false;
+            wp_redirect(admin_url('user-edit.php?user_id=' . $user->ID)); exit;
         }
 
         $db = self::get_surreal_db_conn($errors);
@@ -72,10 +72,11 @@ class UserSyncService extends SyncService {
 
         // Only validate after we save the user and get a surreal id
         self::validate_relation_mapping($mapped_related_data, QueryType::USER, $errors);
+        
 
         if (!empty($errors)) {
             UserErrorManager::add($user->ID, $errors);
-            return false;
+            wp_redirect(admin_url('user-edit.php?user_id=' . $user->ID)); exit;
         }
  
         foreach($mapped_related_data as $mapping) {

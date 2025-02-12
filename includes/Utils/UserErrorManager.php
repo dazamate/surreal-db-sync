@@ -12,7 +12,7 @@ class UserErrorManager {
     public static function add(int $user_id, array $errors): void {
         $existing = get_user_meta($user_id, MetaKeys::SURREAL_SYNC_ERROR_META_KEY->value, true);
 
-        if (!is_array($existing))  $existing = [];
+        if (!is_array($existing)) $existing = [];
 
         $merged = array_merge($existing, $errors);
 

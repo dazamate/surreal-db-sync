@@ -39,29 +39,7 @@ add_action( 'plugins_loaded', function() {
     AdminSettings::load_hooks();
     SyncService::load_hooks();
     PostSyncService::load_hooks();
-    UserSyncService::load_hooks();
-
-    // Test user realtions
-    // add_filter('surreal_graph_map_user_related', function(array $mapped, string $surreal_user_type, \WP_User $user): array {
-    //     if ($user->ID === 8) return $mapped; 
-        
-    //     $friends_mapping = [
-    //         'from_record'       => $user->ID,
-    //         'to_record'         => 8,
-    //         'relation_table'    => 'friends_with',
-    //         'unique'            => true,
-    //         'data'              => [
-    //             'years' => [
-    //                 'type' => 'number',
-    //                 'value' => 42
-    //             ]
-    //         ]
-    //     ];
-
-    //     $mapped[] = $friends_mapping;
-    //     return $mapped;
-    // }, 10, 3);
-    
+    UserSyncService::load_hooks();    
 });
 
 add_action('init', function () {
