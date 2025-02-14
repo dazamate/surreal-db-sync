@@ -33,11 +33,6 @@ class ImageMapper {
             'value' => $post_id
         ];
 
-        $mapped_data['src'] = [
-            'type' => 'string',
-            'value' => ''
-        ];
-
         $mapped_data['mime'] = [
             'type' => 'string',
             'value' => $post->post_mime_type
@@ -46,6 +41,21 @@ class ImageMapper {
         $mapped_data['src'] = [
             'type' => 'string',
             'value' => wp_get_attachment_url( $post_id ) ?: null
+        ];        
+
+        $mapped_data['alt'] = [
+            'type' => 'string',
+            'value' => get_post_meta( $post->ID, '_wp_attachment_image_alt', true ) ?: ''
+        ];
+        
+        $mapped_data['caption'] = [
+            'type' => 'string',
+            'value' => $post->post_excerpt
+        ];
+
+        $mapped_data['description'] = [
+            'type' => 'string',
+            'value' => $post->post_content
         ];
 
         return $mapped_data;
