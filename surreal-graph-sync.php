@@ -15,6 +15,7 @@ use Dazamate\SurrealGraphSync\Container;
 use Dazamate\SurrealGraphSync\Settings\AdminSettings;
 use Dazamate\SurrealGraphSync\Manager\PostSyncManager;
 use Dazamate\SurrealGraphSync\Manager\UserSyncManager;
+use Dazamate\SurrealGraphSync\Manager\ImageSyncManager;
 use Dazamate\SurrealGraphSync\Migration\InitialMigration;
 use Dazamate\SurrealGraphSync\Migration\UserRelationsMigration;
 
@@ -50,6 +51,7 @@ add_action('init', function () {
     
     PostSyncManager::load_hooks();
     UserSyncManager::load_hooks();
+    ImageSyncManager::load_hooks();
 
     ImageMapper::register();
     PostMapper::register();
